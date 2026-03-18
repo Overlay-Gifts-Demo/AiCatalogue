@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Popup UI</title>
+<title>Shop UI</title>
 
 <style>
 
@@ -16,67 +16,32 @@ overflow:hidden;
 }
 
 
-/* CAMERA */
+/* MAIN LAYOUT */
 
-#camera{
-position:fixed;
-top:0;
-left:0;
-width:100%;
-height:100%;
-background:#000;
+#main{
 display:flex;
-align-items:center;
-justify-content:center;
-color:white;
-font-size:22px;
+width:100vw;
+height:100vh;
 }
 
 
-/* SELECT BUTTON */
+/* LEFT CATEGORY */
 
-#openBtn{
-position:fixed;
-bottom:120px;
-left:50%;
-transform:translateX(-50%);
-padding:12px 20px;
-background:gold;
-border:none;
-border-radius:8px;
-font-size:16px;
-cursor:pointer;
-}
-
-
-/* POPUP */
-
-#popup{
-position:fixed;
-bottom:0;
-left:0;
-width:100%;
-height:50%;
-background:rgba(0,0,0,0.95);
-display:none;
+#left{
+width:150px;
+background:#111;
+display:flex;
 flex-direction:column;
 padding:10px;
+gap:10px;
 box-sizing:border-box;
-}
-
-
-/* CATEGORY */
-
-.catRow{
-display:flex;
-justify-content:space-around;
-margin-bottom:10px;
 }
 
 .cat{
 background:#222;
 color:white;
-padding:8px 12px;
+padding:10px;
+text-align:center;
 border-radius:6px;
 cursor:pointer;
 }
@@ -87,21 +52,36 @@ color:black;
 }
 
 
-/* PRODUCTS */
+/* CAMERA */
 
-#products{
+#camera{
 flex:1;
+background:#000;
 display:flex;
-flex-wrap:wrap;
+align-items:center;
+justify-content:center;
+color:white;
+font-size:22px;
+}
+
+
+/* RIGHT PRODUCTS */
+
+#right{
+width:320px;
+background:#000;
+display:grid;
+grid-template-columns:repeat(3,1fr);
 gap:10px;
+padding:10px;
+box-sizing:border-box;
 overflow-y:auto;
 }
 
 .product{
-width:70px;
-height:70px;
 background:#222;
 color:white;
+height:80px;
 display:flex;
 align-items:center;
 justify-content:center;
@@ -114,41 +94,16 @@ cursor:pointer;
 border:2px solid gold;
 }
 
-
-/* CLOSE */
-
-#close{
-position:absolute;
-top:5px;
-right:10px;
-color:white;
-cursor:pointer;
-font-size:20px;
-}
-
 </style>
 </head>
 <body>
 
 
 
-<div id="camera">
-Camera / AR Screen
-</div>
+<div id="main">
 
 
-
-<button id="openBtn" onclick="openPopup()">
-Select Jewellery
-</button>
-
-
-
-<div id="popup">
-
-<div id="close" onclick="closePopup()">✖</div>
-
-<div class="catRow">
+<div id="left">
 
 <div class="cat" onclick="loadCategory('earrings',this)">Earrings</div>
 <div class="cat" onclick="loadCategory('chains',this)">Chains</div>
@@ -158,7 +113,16 @@ Select Jewellery
 </div>
 
 
-<div id="products"></div>
+
+<div id="camera">
+Camera / AR Screen
+</div>
+
+
+
+<div id="right"></div>
+
+
 
 </div>
 
@@ -174,27 +138,18 @@ bangles:15
 };
 
 
-function openPopup(){
-document.getElementById("popup").style.display="flex";
-}
-
-function closePopup(){
-document.getElementById("popup").style.display="none";
-}
-
-
 function loadCategory(name, el){
 
 document.querySelectorAll(".cat").forEach(c=>c.classList.remove("active"));
 el.classList.add("active");
 
-const box = document.getElementById("products");
+const box = document.getElementById("right");
 
 box.innerHTML="";
 
 for(let i=1;i<=counts[name];i++){
 
-let p=document.createElement("div");
+let p = document.createElement("div");
 
 p.className="product";
 
@@ -213,7 +168,11 @@ box.appendChild(p);
 
 }
 
+
+loadCategory("earrings", document.querySelectorAll(".cat")[0]);
+
 </script>
+
 
 
 </body>
