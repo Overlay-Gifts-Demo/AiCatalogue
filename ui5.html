@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Luxury UI</title>
+
+<style>
+
+body{
+margin:0;
+background:black;
+font-family:Arial;
+overflow:hidden;
+}
+
+
+/* CAMERA */
+
+#camera{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:#000;
+display:flex;
+align-items:center;
+justify-content:center;
+color:white;
+font-size:22px;
+}
+
+
+/* CENTER CIRCLE */
+
+#center{
+position:fixed;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+width:120px;
+height:120px;
+border-radius:50%;
+border:3px solid gold;
+display:flex;
+align-items:center;
+justify-content:center;
+color:white;
+font-size:14px;
+pointer-events:none;
+}
+
+
+/* CATEGORY BUTTON */
+
+.cat{
+position:fixed;
+width:90px;
+height:90px;
+border-radius:50%;
+background:rgba(255,255,255,0.1);
+color:white;
+display:flex;
+align-items:center;
+justify-content:center;
+cursor:pointer;
+border:2px solid #999;
+}
+
+.cat.active{
+border:2px solid gold;
+background:rgba(255,215,0,0.3);
+}
+
+
+/* POSITIONS */
+
+#earrings{ top:10%; left:50%; transform:translateX(-50%); }
+#chains{ top:50%; left:5%; transform:translateY(-50%); }
+#rings{ top:50%; right:5%; transform:translateY(-50%); }
+#bangles{ bottom:10%; left:50%; transform:translateX(-50%); }
+
+
+/* PRODUCT BAR */
+
+#products{
+position:fixed;
+bottom:0;
+left:0;
+width:100%;
+height:90px;
+background:rgba(0,0,0,0.85);
+display:flex;
+overflow-x:auto;
+gap:10px;
+padding:10px;
+box-sizing:border-box;
+}
+
+.product{
+min-width:70px;
+height:70px;
+background:#222;
+color:white;
+display:flex;
+align-items:center;
+justify-content:center;
+border-radius:10px;
+border:2px solid #444;
+}
+
+.product:hover{
+border:2px solid gold;
+}
+
+</style>
+</head>
+<body>
+
+
+
+<div id="camera">
+Camera / AR Screen
+</div>
+
+
+<div id="center">
+TRY ON
+</div>
+
+
+<div id="earrings" class="cat" onclick="loadCategory('earrings',this)">
+Ear
+</div>
+
+<div id="chains" class="cat" onclick="loadCategory('chains',this)">
+Chain
+</div>
+
+<div id="rings" class="cat" onclick="loadCategory('rings',this)">
+Ring
+</div>
+
+<div id="bangles" class="cat" onclick="loadCategory('bangles',this)">
+Bang
+</div>
+
+
+<div id="products"></div>
+
+
+
+<script>
+
+const counts = {
+earrings:15,
+chains:15,
+rings:15,
+bangles:15
+};
+
+function loadCategory(name, el){
+
+document.querySelectorAll(".cat").forEach(c=>c.classList.remove("active"));
+el.classList.add("active");
+
+const box = document.getElementById("products");
+box.innerHTML="";
+
+for(let i=1;i<=counts[name];i++){
+
+let p = document.createElement("div");
+p.className="product";
+p.innerText=name+" "+i;
+
+p.onclick=()=>{
+
+document.getElementById("camera").innerText =
+"Trying "+name+" "+i;
+
+};
+
+box.appendChild(p);
+
+}
+
+}
+
+</script>
+
+
+</body>
+</html>
