@@ -4,76 +4,109 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Try On UI - Dropdown Grid</title>
+<title>Popup UI</title>
 
 <style>
 
 body{
 margin:0;
-font-family:Arial, sans-serif;
 background:black;
-color:white;
-}
-
-
-/* TOP BAR */
-
-#topbar{
-height:60px;
-background:#111;
-display:flex;
-align-items:center;
-justify-content:center;
-border-bottom:1px solid #333;
-}
-
-select{
-padding:8px 12px;
-font-size:16px;
-background:#222;
-color:white;
-border:1px solid #555;
-border-radius:6px;
+font-family:Arial;
+overflow:hidden;
 }
 
 
 /* CAMERA */
 
 #camera{
-height:40vh;
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
 background:#000;
 display:flex;
 align-items:center;
 justify-content:center;
+color:white;
 font-size:22px;
-border-bottom:1px solid #333;
 }
 
 
-/* GRID AREA */
+/* SELECT BUTTON */
 
-#grid{
-height:calc(60vh - 60px);
-background:#000;
-display:grid;
-grid-template-columns:repeat(4,1fr);
-gap:10px;
+#openBtn{
+position:fixed;
+bottom:120px;
+left:50%;
+transform:translateX(-50%);
+padding:12px 20px;
+background:gold;
+border:none;
+border-radius:8px;
+font-size:16px;
+cursor:pointer;
+}
+
+
+/* POPUP */
+
+#popup{
+position:fixed;
+bottom:0;
+left:0;
+width:100%;
+height:50%;
+background:rgba(0,0,0,0.95);
+display:none;
+flex-direction:column;
 padding:10px;
 box-sizing:border-box;
+}
+
+
+/* CATEGORY */
+
+.catRow{
+display:flex;
+justify-content:space-around;
+margin-bottom:10px;
+}
+
+.cat{
+background:#222;
+color:white;
+padding:8px 12px;
+border-radius:6px;
+cursor:pointer;
+}
+
+.cat.active{
+background:gold;
+color:black;
+}
+
+
+/* PRODUCTS */
+
+#products{
+flex:1;
+display:flex;
+flex-wrap:wrap;
+gap:10px;
 overflow-y:auto;
 }
 
-
-/* PRODUCT */
-
 .product{
+width:70px;
+height:70px;
 background:#222;
-border:2px solid #444;
-border-radius:8px;
+color:white;
 display:flex;
 align-items:center;
 justify-content:center;
-height:70px;
+border-radius:8px;
+border:2px solid #444;
 cursor:pointer;
 }
 
@@ -81,24 +114,21 @@ cursor:pointer;
 border:2px solid gold;
 }
 
+
+/* CLOSE */
+
+#close{
+position:absolute;
+top:5px;
+right:10px;
+color:white;
+cursor:pointer;
+font-size:20px;
+}
+
 </style>
 </head>
 <body>
-
-
-
-<div id="topbar">
-
-<select id="category" onchange="loadCategory()">
-
-<option value="earrings">Earrings</option>
-<option value="chains">Chains</option>
-<option value="rings">Rings</option>
-<option value="bangles">Bangles</option>
-
-</select>
-
-</div>
 
 
 
@@ -108,7 +138,29 @@ Camera / AR Screen
 
 
 
-<div id="grid"></div>
+<button id="openBtn" onclick="openPopup()">
+Select Jewellery
+</button>
+
+
+
+<div id="popup">
+
+<div id="close" onclick="closePopup()">✖</div>
+
+<div class="catRow">
+
+<div class="cat" onclick="loadCategory('earrings',this)">Earrings</div>
+<div class="cat" onclick="loadCategory('chains',this)">Chains</div>
+<div class="cat" onclick="loadCategory('rings',this)">Rings</div>
+<div class="cat" onclick="loadCategory('bangles',this)">Bangles</div>
+
+</div>
+
+
+<div id="products"></div>
+
+</div>
 
 
 
@@ -122,40 +174,46 @@ bangles:15
 };
 
 
-function loadCategory(){
+function openPopup(){
+document.getElementById("popup").style.display="flex";
+}
 
-let cat = document.getElementById("category").value;
+function closePopup(){
+document.getElementById("popup").style.display="none";
+}
 
-let grid = document.getElementById("grid");
 
-grid.innerHTML = "";
+function loadCategory(name, el){
 
-for(let i=1;i<=counts[cat];i++){
+document.querySelectorAll(".cat").forEach(c=>c.classList.remove("active"));
+el.classList.add("active");
 
-let div = document.createElement("div");
+const box = document.getElementById("products");
 
-div.className = "product";
+box.innerHTML="";
 
-div.innerText = cat + " " + i;
+for(let i=1;i<=counts[name];i++){
 
-div.onclick = function(){
+let p=document.createElement("div");
+
+p.className="product";
+
+p.innerText=name+" "+i;
+
+p.onclick=()=>{
 
 document.getElementById("camera").innerText =
-"Trying " + cat + " " + i;
+"Trying "+name+" "+i;
 
 };
 
-grid.appendChild(div);
+box.appendChild(p);
 
 }
 
 }
-
-
-loadCategory();
 
 </script>
-
 
 
 </body>
