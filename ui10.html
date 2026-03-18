@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Spotlight UI</title>
+
+<style>
+
+body{
+margin:0;
+background:black;
+font-family:Arial;
+overflow:hidden;
+}
+
+
+/* TOP */
+
+#top{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:50px;
+background:#111;
+display:flex;
+justify-content:center;
+align-items:center;
+z-index:2;
+}
+
+select{
+padding:6px;
+background:#222;
+color:white;
+border:1px solid #555;
+}
+
+
+/* CAMERA */
+
+#camera{
+position:fixed;
+top:50px;
+bottom:150px;
+left:0;
+right:0;
+background:#000;
+display:flex;
+align-items:center;
+justify-content:center;
+color:white;
+font-size:22px;
+}
+
+
+/* CAROUSEL */
+
+#carousel{
+position:fixed;
+bottom:0;
+left:0;
+width:100%;
+height:150px;
+background:rgba(0,0,0,0.9);
+display:flex;
+align-items:center;
+justify-content:center;
+gap:20px;
+overflow:hidden;
+}
+
+
+/* ITEMS */
+
+.item{
+
+width:80px;
+height:80px;
+background:#222;
+color:white;
+display:flex;
+align-items:center;
+justify-content:center;
+border-radius:10px;
+border:2px solid #444;
+cursor:pointer;
+opacity:0.5;
+transform:scale(0.8);
+
+}
+
+.item.active{
+
+opacity:1;
+transform:scale(1.2);
+border:2px solid gold;
+
+}
+
+</style>
+</head>
+<body>
+
+
+<div id="top">
+
+<select id="category" onchange="loadCategory()">
+
+<option value="earrings">Earrings</option>
+<option value="chains">Chains</option>
+<option value="rings">Rings</option>
+<option value="bangles">Bangles</option>
+
+</select>
+
+</div>
+
+
+
+<div id="camera">
+
+Camera / AR Screen
+
+</div>
+
+
+
+<div id="carousel"></div>
+
+
+
+<script>
+
+let currentIndex=0;
+
+let items=[];
+
+const count=15;
+
+
+
+function loadCategory(){
+
+const cat=document.getElementById("category").value;
+
+const box=document.getElementById("carousel");
+
+box.innerHTML="";
+
+items=[];
+
+for(let i=1;i<=count;i++){
+
+let d=document.createElement("div");
+
+d.className="item";
+
+d.innerText=cat+" "+i;
+
+d.onclick=()=>{
+
+currentIndex=i-1;
+
+update();
+
+document.getElementById("camera").innerText=
+
+"Trying "+cat+" "+i;
+
+};
+
+box.appendChild(d);
+
+items.push(d);
+
+}
+
+currentIndex=0;
+
+update();
+
+}
+
+
+
+function update(){
+
+items.forEach(i=>i.classList.remove("active"));
+
+if(items[currentIndex])
+
+items[currentIndex].classList.add("active");
+
+}
+
+
+
+loadCategory();
+
+</script>
+
+
+</body>
+</html>
