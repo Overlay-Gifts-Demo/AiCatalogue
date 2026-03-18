@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-<title>Step UI</title>
+<title>Step UI Subfolder</title>
 
 <style>
 
@@ -15,15 +15,12 @@ font-family:Arial;
 overflow:hidden;
 }
 
-
-/* CAMERA */
-
 #camera{
 position:fixed;
 top:0;
 left:0;
 width:100%;
-height:70%;
+height:65%;
 background:#000;
 display:flex;
 align-items:center;
@@ -32,20 +29,17 @@ color:white;
 font-size:22px;
 }
 
-
-/* STEP BAR */
-
 #steps{
 position:fixed;
-top:70%;
+top:65%;
 left:0;
 width:100%;
 height:40px;
 background:#111;
 display:flex;
 justify-content:center;
-align-items:center;
 gap:10px;
+align-items:center;
 }
 
 .step{
@@ -60,16 +54,13 @@ background:gold;
 color:black;
 }
 
-
-/* PANEL */
-
 #panel{
 position:fixed;
 bottom:0;
 left:0;
 width:100%;
-height:30%;
-background:rgba(0,0,0,0.9);
+height:35%;
+background:#000;
 display:flex;
 flex-wrap:wrap;
 gap:10px;
@@ -79,7 +70,7 @@ overflow:auto;
 }
 
 .item{
-width:70px;
+width:80px;
 height:70px;
 background:#222;
 color:white;
@@ -100,43 +91,43 @@ border:2px solid gold;
 <body>
 
 
-
 <div id="camera">
 Camera / AR Screen
 </div>
 
 
-
 <div id="steps">
 
 <div class="step" id="s1">Category</div>
-<div class="step" id="s2">Product</div>
-<div class="step" id="s3">Try</div>
+<div class="step" id="s2">Sub</div>
+<div class="step" id="s3">Product</div>
+<div class="step" id="s4">Try</div>
 
 </div>
-
 
 
 <div id="panel"></div>
 
 
-
 <script>
 
-let step = 1;
-let currentCategory = "";
 
-const counts = {
-earrings:15,
-chains:15,
-rings:15,
-bangles:15
+const data = {
+
+earrings:["Stud","Drop","Hoop"],
+rings:["Gold","Diamond","Silver"],
+chains:["Short","Long","Bridal"],
+bangles:["Simple","Bridal","Stone"]
+
 };
+
+const productCount = 15;
+
+let currentCategory="";
+let currentSub="";
 
 
 function setStep(n){
-
-step = n;
 
 document.querySelectorAll(".step").forEach(s=>s.classList.remove("active"));
 
@@ -149,13 +140,13 @@ function showCategories(){
 
 setStep(1);
 
-const p = document.getElementById("panel");
+const p=document.getElementById("panel");
 
 p.innerHTML="";
 
-["earrings","chains","rings","bangles"].forEach(cat=>{
+Object.keys(data).forEach(cat=>{
 
-let d = document.createElement("div");
+let d=document.createElement("div");
 
 d.className="item";
 
@@ -163,7 +154,38 @@ d.innerText=cat;
 
 d.onclick=()=>{
 
-currentCategory = cat;
+currentCategory=cat;
+
+showSub();
+
+};
+
+p.appendChild(d);
+
+});
+
+}
+
+
+function showSub(){
+
+setStep(2);
+
+const p=document.getElementById("panel");
+
+p.innerHTML="";
+
+data[currentCategory].forEach(sub=>{
+
+let d=document.createElement("div");
+
+d.className="item";
+
+d.innerText=sub;
+
+d.onclick=()=>{
+
+currentSub=sub;
 
 showProducts();
 
@@ -178,26 +200,26 @@ p.appendChild(d);
 
 function showProducts(){
 
-setStep(2);
+setStep(3);
 
-const p = document.getElementById("panel");
+const p=document.getElementById("panel");
 
 p.innerHTML="";
 
-for(let i=1;i<=counts[currentCategory];i++){
+for(let i=1;i<=productCount;i++){
 
-let d = document.createElement("div");
+let d=document.createElement("div");
 
 d.className="item";
 
-d.innerText=currentCategory+" "+i;
+d.innerText=currentSub+" "+i;
 
 d.onclick=()=>{
 
-document.getElementById("camera").innerText =
-"Trying "+currentCategory+" "+i;
+document.getElementById("camera").innerText=
+"Trying "+currentCategory+" "+currentSub+" "+i;
 
-setStep(3);
+setStep(4);
 
 };
 
@@ -211,7 +233,6 @@ p.appendChild(d);
 showCategories();
 
 </script>
-
 
 
 </body>
