@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Try On UI - Side Panel</title>
+
+<style>
+
+body{
+margin:0;
+background:black;
+font-family:Arial;
+overflow:hidden;
+}
+
+/* LAYOUT */
+
+#main{
+display:flex;
+width:100vw;
+height:100vh;
+}
+
+/* SIDE PANEL */
+
+#side{
+width:120px;
+background:#111;
+display:flex;
+flex-direction:column;
+padding:10px;
+gap:10px;
+box-sizing:border-box;
+}
+
+.cat{
+background:#222;
+color:white;
+padding:10px;
+text-align:center;
+border-radius:8px;
+cursor:pointer;
+}
+
+.cat.active{
+background:gold;
+color:black;
+}
+
+/* CAMERA */
+
+#camera{
+flex:1;
+background:#000;
+display:flex;
+align-items:center;
+justify-content:center;
+color:white;
+font-size:22px;
+}
+
+/* PRODUCTS */
+
+#products{
+position:fixed;
+bottom:0;
+left:120px;
+right:0;
+height:90px;
+background:rgba(0,0,0,0.9);
+display:flex;
+gap:10px;
+overflow-x:auto;
+padding:10px;
+box-sizing:border-box;
+}
+
+.product{
+min-width:70px;
+height:70px;
+background:#222;
+color:white;
+display:flex;
+align-items:center;
+justify-content:center;
+border-radius:8px;
+}
+
+</style>
+</head>
+
+<body>
+
+
+<div id="main">
+
+<div id="side">
+
+<div class="cat" onclick="loadCategory('earrings', this)">Earrings</div>
+<div class="cat" onclick="loadCategory('chains', this)">Chains</div>
+<div class="cat" onclick="loadCategory('rings', this)">Rings</div>
+<div class="cat" onclick="loadCategory('bangles', this)">Bangles</div>
+
+</div>
+
+
+<div id="camera">
+Camera / AR Screen
+</div>
+
+</div>
+
+
+<div id="products"></div>
+
+
+
+<script>
+
+const counts = {
+earrings:15,
+chains:15,
+rings:15,
+bangles:15
+};
+
+function loadCategory(name, el){
+
+document.querySelectorAll(".cat").forEach(c=>c.classList.remove("active"));
+el.classList.add("active");
+
+const box = document.getElementById("products");
+box.innerHTML="";
+
+for(let i=1;i<=counts[name];i++){
+
+let p = document.createElement("div");
+p.className="product";
+p.innerText=name+" "+i;
+
+p.onclick=()=>{
+
+document.getElementById("camera").innerText =
+"Trying "+name+" "+i;
+
+};
+
+box.appendChild(p);
+
+}
+
+}
+
+loadCategory("earrings", document.querySelectorAll(".cat")[0]);
+
+</script>
+
+
+</body>
+</html>
