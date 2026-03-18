@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Dropdown Grid UI</title>
+
+<style>
+
+body{
+margin:0;
+background:black;
+font-family:Arial;
+overflow:hidden;
+}
+
+
+/* TOP BAR */
+
+#topbar{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:60px;
+background:#111;
+display:flex;
+align-items:center;
+justify-content:center;
+z-index:2;
+}
+
+select{
+padding:8px;
+font-size:16px;
+background:#222;
+color:white;
+border:1px solid #555;
+}
+
+
+/* CAMERA */
+
+#camera{
+position:fixed;
+top:60px;
+left:0;
+width:100%;
+height:40%;
+background:#000;
+display:flex;
+align-items:center;
+justify-content:center;
+color:white;
+font-size:22px;
+}
+
+
+/* GRID */
+
+#grid{
+position:fixed;
+bottom:0;
+left:0;
+width:100%;
+top:calc(60px + 40%);
+background:rgba(0,0,0,0.9);
+display:grid;
+grid-template-columns:repeat(4,1fr);
+gap:10px;
+padding:10px;
+box-sizing:border-box;
+overflow-y:auto;
+}
+
+.product{
+background:#222;
+color:white;
+height:70px;
+display:flex;
+align-items:center;
+justify-content:center;
+border-radius:8px;
+border:2px solid #444;
+cursor:pointer;
+}
+
+.product:hover{
+border:2px solid gold;
+}
+
+</style>
+</head>
+<body>
+
+
+
+<div id="topbar">
+
+<select id="category" onchange="changeCategory()">
+<option value="earrings">Earrings</option>
+<option value="chains">Chains</option>
+<option value="rings">Rings</option>
+<option value="bangles">Bangles</option>
+</select>
+
+</div>
+
+
+
+<div id="camera">
+Camera / AR Screen
+</div>
+
+
+
+<div id="grid"></div>
+
+
+
+<script>
+
+const counts = {
+earrings:15,
+chains:15,
+rings:15,
+bangles:15
+};
+
+
+function changeCategory(){
+
+let name = document.getElementById("category").value;
+
+const grid = document.getElementById("grid");
+
+grid.innerHTML="";
+
+
+for(let i=1;i<=counts[name];i++){
+
+let p = document.createElement("div");
+
+p.className="product";
+
+p.innerText=name+" "+i;
+
+p.onclick=()=>{
+
+document.getElementById("camera").innerText =
+"Trying "+name+" "+i;
+
+};
+
+grid.appendChild(p);
+
+}
+
+}
+
+
+changeCategory();
+
+</script>
+
+
+
+</body>
+</html>
