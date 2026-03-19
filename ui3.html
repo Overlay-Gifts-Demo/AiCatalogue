@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>JEWELS-AI | Netflix Style AR</title>
+  <title>JEWELS-AI | Netflix AR</title>
   
   <link rel="stylesheet" href="style.css" />
 
@@ -15,69 +15,46 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
   <style>
-    body { margin: 0; background: black; font-family: 'Montserrat', sans-serif; overflow: hidden; }
+    body { margin:0; background:black; font-family: 'Montserrat', sans-serif; overflow:hidden; }
+    
+    /* 1. Camera Layer - Must be below UI */
+    #video-container { position:fixed; inset:0; background:black; z-index:1; }
+    #webcam, #overlay { position:absolute; width:100%; height:100%; object-fit:contain; }
+    #webcam { transform: scaleX(-1); } /* Mirror for front camera */
 
-    /* CAMERA AREA */
-    #video-container {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: #000; z-index: 1;
-    }
-    #webcam, #overlay { position: absolute; width: 100%; height: 100%; object-fit: contain; }
-    #webcam { transform: scaleX(-1); }
-
-    /* NETFLIX PANEL */
+    /* 2. Netflix Panel - Scrolling rows */
     #netflix-panel {
-      position: fixed; bottom: 0; left: 0; width: 100%; height: 45%;
-      background: linear-gradient(to top, rgba(0,0,0,1) 80%, rgba(0,0,0,0));
-      overflow-y: auto; z-index: 10; padding: 20px; box-sizing: border-box;
+      position:fixed; bottom:0; left:0; width:100%; height:45%;
+      background: linear-gradient(to top, rgba(0,0,0,1) 70%, rgba(0,0,0,0));
+      overflow-y:auto; z-index:10; padding:20px; box-sizing:border-box;
       scrollbar-width: none;
     }
-    #netflix-panel::-webkit-scrollbar { display: none; }
-
-    .category-title {
-      color: #d4af37; font-family: 'Playfair Display', serif;
-      font-size: 18px; margin: 15px 0 5px 0; text-transform: uppercase; letter-spacing: 1px;
+    .category-title { color:#d4af37; font-size:16px; margin:15px 0 5px 0; text-transform:uppercase; font-weight:bold; }
+    .row { display:flex; overflow-x:auto; gap:12px; padding:10px 0; scrollbar-width:none; }
+    .product-card { 
+        min-width:85px; height:85px; background:#222; border-radius:10px; 
+        border:2px solid #444; object-fit:contain; cursor:pointer; 
     }
+    .product-card:hover { border-color: gold; transform: scale(1.05); }
 
-    .row { display: flex; overflow-x: auto; gap: 12px; padding: 10px 0; scrollbar-width: none; }
-    .row::-webkit-scrollbar { display: none; }
-
-    /* PRODUCT CARD */
-    .product-card {
-      min-width: 90px; height: 90px; background: rgba(34, 34, 34, 0.8);
-      border-radius: 12px; border: 2px solid #444; cursor: pointer;
-      object-fit: contain; transition: all 0.3s ease; padding: 5px;
-    }
-    .product-card:hover { border-color: #d4af37; transform: scale(1.05); }
-
-    /* TOP ACTIONS */
-    #top-bar {
-      position: fixed; top: 20px; right: 20px; z-index: 100;
-      display: flex; gap: 15px;
-    }
+    #loading-status { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); color:gold; z-index:2; }
   </style>
 </head>
 <body>
 
   <div id="app">
     <div id="flash-overlay"></div>
+    <div id="loading-status">Initializing Camera...</div>
 
     <div id="video-container">
       <video id="webcam" autoplay playsinline muted></video>
       <canvas id="overlay"></canvas>
-      <div id="loading-status">Starting AR Engine...</div>
-    </div>
-
-    <div id="top-bar">
-        <button class="pill accent" onclick="takeSnapshot()">📷 SNAP</button>
-        <button class="pill" onclick="toggleStacking()" id="stacking-btn">MIX & MATCH</button>
     </div>
 
     <div id="netflix-panel">
       </div>
 
     <div id="ai-concierge-container">
-        <div id="ai-bubble">Hi, I'm Nila</div>
         <div id="ai-avatar" onclick="toggleConciergeMute()"><div class="avatar-face">🤖</div></div>
     </div>
   </div>
@@ -85,15 +62,18 @@
   <script src="core.js"></script>
   
   <script>
-    // Custom logic to build the Netflix Rows from core.js data
     async function buildNetflixUI() {
+      // 1. Force Start Camera immediately to avoid black screen
+      if (typeof startCameraFast === 'function') {
+          await startCameraFast('user'); 
+          document.getElementById('loading-status').style.display = 'none';
+      }
+
       const categories = ['earrings', 'chains', 'rings', 'bangles'];
       const panel = document.getElementById("netflix-panel");
       
       for (const cat of categories) {
-        // Fetch data using the core.js function
         const assets = await fetchCategoryData(cat); 
-        
         if (assets && assets.length > 0) {
           let title = document.createElement("div");
           title.className = "category-title";
@@ -107,13 +87,13 @@
             let img = document.createElement("img");
             img.className = "product-card";
             img.src = asset.thumbSrc;
-            
-            // Link to the core.js application function
             img.onclick = () => {
+              // Trigger AR for the specific category
+              const mode = (cat === 'rings' || cat === 'bangles') ? 'environment' : 'user';
+              startCameraFast(mode); 
               window.JewelsState.currentType = cat;
               applyAssetInstantly(asset, index, true);
             };
-            
             row.appendChild(img);
           });
           panel.appendChild(row);
@@ -121,10 +101,8 @@
       }
     }
 
-    // Initialize after core.js loads
-    window.addEventListener('load', () => {
-      setTimeout(buildNetflixUI, 2000); 
-    });
+    // Run UI builder when everything is loaded
+    window.addEventListener('load', buildNetflixUI);
   </script>
 </body>
 </html>
