@@ -1,159 +1,130 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>JEWELS-AI | Netflix Style AR</title>
+  
+  <link rel="stylesheet" href="style.css" />
 
-<title>Try On UI - Netflix Style</title>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
-<style>
+  <style>
+    body { margin: 0; background: black; font-family: 'Montserrat', sans-serif; overflow: hidden; }
 
-body{
-margin:0;
-background:black;
-font-family:Arial;
-overflow:hidden;
-}
+    /* CAMERA AREA */
+    #video-container {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: #000; z-index: 1;
+    }
+    #webcam, #overlay { position: absolute; width: 100%; height: 100%; object-fit: contain; }
+    #webcam { transform: scaleX(-1); }
 
-/* CAMERA */
+    /* NETFLIX PANEL */
+    #netflix-panel {
+      position: fixed; bottom: 0; left: 0; width: 100%; height: 45%;
+      background: linear-gradient(to top, rgba(0,0,0,1) 80%, rgba(0,0,0,0));
+      overflow-y: auto; z-index: 10; padding: 20px; box-sizing: border-box;
+      scrollbar-width: none;
+    }
+    #netflix-panel::-webkit-scrollbar { display: none; }
 
-#camera{
-position:fixed;
-top:0;
-left:0;
-width:100%;
-height:100%;
-background:#000;
-display:flex;
-align-items:center;
-justify-content:center;
-color:white;
-font-size:22px;
-z-index:1;
-}
+    .category-title {
+      color: #d4af37; font-family: 'Playfair Display', serif;
+      font-size: 18px; margin: 15px 0 5px 0; text-transform: uppercase; letter-spacing: 1px;
+    }
 
+    .row { display: flex; overflow-x: auto; gap: 12px; padding: 10px 0; scrollbar-width: none; }
+    .row::-webkit-scrollbar { display: none; }
 
-/* PANEL */
+    /* PRODUCT CARD */
+    .product-card {
+      min-width: 90px; height: 90px; background: rgba(34, 34, 34, 0.8);
+      border-radius: 12px; border: 2px solid #444; cursor: pointer;
+      object-fit: contain; transition: all 0.3s ease; padding: 5px;
+    }
+    .product-card:hover { border-color: #d4af37; transform: scale(1.05); }
 
-#panel{
-position:fixed;
-bottom:0;
-left:0;
-width:100%;
-height:40%;
-background:rgba(0,0,0,0.85);
-overflow-y:auto;
-z-index:2;
-padding:10px;
-box-sizing:border-box;
-}
-
-
-/* CATEGORY */
-
-.category{
-color:white;
-font-size:16px;
-margin-top:10px;
-}
-
-
-/* ROW */
-
-.row{
-display:flex;
-overflow-x:auto;
-gap:10px;
-padding:10px 0;
-}
-
-
-/* PRODUCT */
-
-.product{
-min-width:80px;
-height:80px;
-background:#222;
-border-radius:10px;
-display:flex;
-align-items:center;
-justify-content:center;
-color:white;
-font-size:12px;
-border:2px solid #444;
-cursor:pointer;
-}
-
-.product:hover{
-border:2px solid gold;
-}
-
-</style>
+    /* TOP ACTIONS */
+    #top-bar {
+      position: fixed; top: 20px; right: 20px; z-index: 100;
+      display: flex; gap: 15px;
+    }
+  </style>
 </head>
 <body>
 
+  <div id="app">
+    <div id="flash-overlay"></div>
 
-<div id="camera">
-Camera / AR Screen
-</div>
+    <div id="video-container">
+      <video id="webcam" autoplay playsinline muted></video>
+      <canvas id="overlay"></canvas>
+      <div id="loading-status">Starting AR Engine...</div>
+    </div>
 
+    <div id="top-bar">
+        <button class="pill accent" onclick="takeSnapshot()">📷 SNAP</button>
+        <button class="pill" onclick="toggleStacking()" id="stacking-btn">MIX & MATCH</button>
+    </div>
 
-<div id="panel"></div>
+    <div id="netflix-panel">
+      </div>
 
+    <div id="ai-concierge-container">
+        <div id="ai-bubble">Hi, I'm Nila</div>
+        <div id="ai-avatar" onclick="toggleConciergeMute()"><div class="avatar-face">🤖</div></div>
+    </div>
+  </div>
 
+  <script src="core.js"></script>
+  
+  <script>
+    // Custom logic to build the Netflix Rows from core.js data
+    async function buildNetflixUI() {
+      const categories = ['earrings', 'chains', 'rings', 'bangles'];
+      const panel = document.getElementById("netflix-panel");
+      
+      for (const cat of categories) {
+        // Fetch data using the core.js function
+        const assets = await fetchCategoryData(cat); 
+        
+        if (assets && assets.length > 0) {
+          let title = document.createElement("div");
+          title.className = "category-title";
+          title.innerText = cat;
+          panel.appendChild(title);
 
-<script>
+          let row = document.createElement("div");
+          row.className = "row";
 
-const categories = [
-"earrings",
-"chains",
-"rings",
-"bangles"
-];
+          assets.forEach((asset, index) => {
+            let img = document.createElement("img");
+            img.className = "product-card";
+            img.src = asset.thumbSrc;
+            
+            // Link to the core.js application function
+            img.onclick = () => {
+              window.JewelsState.currentType = cat;
+              applyAssetInstantly(asset, index, true);
+            };
+            
+            row.appendChild(img);
+          });
+          panel.appendChild(row);
+        }
+      }
+    }
 
-const count = 15;
-
-
-const panel = document.getElementById("panel");
-
-
-categories.forEach(cat=>{
-
-let title = document.createElement("div");
-title.className="category";
-title.innerText=cat.toUpperCase();
-
-panel.appendChild(title);
-
-
-let row = document.createElement("div");
-row.className="row";
-
-
-for(let i=1;i<=count;i++){
-
-let p = document.createElement("div");
-p.className="product";
-
-p.innerText = cat + " " + i;
-
-p.onclick = ()=>{
-
-document.getElementById("camera").innerText =
-"Trying " + cat + " " + i;
-
-};
-
-row.appendChild(p);
-
-}
-
-panel.appendChild(row);
-
-});
-
-</script>
-
-
+    // Initialize after core.js loads
+    window.addEventListener('load', () => {
+      setTimeout(buildNetflixUI, 2000); 
+    });
+  </script>
 </body>
 </html>
