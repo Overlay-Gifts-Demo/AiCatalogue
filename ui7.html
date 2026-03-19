@@ -1,220 +1,141 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>JEWELS-AI | Popup AR</title>
+  
+  <link rel="stylesheet" href="style.css" />
 
-<title>Popup UI</title>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
-<style>
+  <style>
+    body { margin: 0; background: black; font-family: 'Montserrat', sans-serif; overflow: hidden; color: white; }
 
-body{
-margin:0;
-background:black;
-font-family:Arial;
-overflow:hidden;
-}
+    /* 1. AR BACKGROUND LAYER */
+    #video-container { position: fixed; inset: 0; background: black; z-index: 1; }
+    #webcam, #overlay { position: absolute; width: 100%; height: 100%; object-fit: contain; }
+    #webcam { transform: scaleX(-1); }
 
+    /* 2. TRIGGER BUTTON */
+    #openBtn {
+      position: fixed; bottom: 120px; left: 50%; transform: translateX(-50%);
+      padding: 15px 30px; background: #d4af37; border: none; border-radius: 30px;
+      font-size: 16px; font-weight: bold; cursor: pointer; z-index: 10;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.5); transition: 0.3s;
+    }
+    #openBtn:hover { transform: translateX(-50%) scale(1.05); background: #fdf5e6; }
 
-/* CAMERA */
+    /* 3. POPUP PANEL */
+    #popup-panel {
+      position: fixed; bottom: 0; left: 0; width: 100%; height: 55%;
+      background: rgba(0,0,0,0.95); display: none; flex-direction: column;
+      padding: 20px; box-sizing: border-box; z-index: 100;
+      border-top: 2px solid #d4af37; border-radius: 20px 20px 0 0;
+      backdrop-filter: blur(10px);
+    }
 
-#camera{
-position:fixed;
-top:0;
-left:0;
-width:100%;
-height:100%;
-background:#000;
-display:flex;
-align-items:center;
-justify-content:center;
-color:white;
-font-size:22px;
-}
+    .catRow { display: flex; justify-content: space-around; margin-bottom: 20px; gap: 10px; }
+    .cat-node {
+      background: #222; color: white; padding: 10px 15px; border-radius: 8px;
+      cursor: pointer; border: 1px solid #444; font-size: 13px; transition: 0.3s;
+    }
+    .cat-node.active { background: #d4af37; color: black; font-weight: bold; border-color: #d4af37; }
 
+    /* 4. GRID CONTAINER (Linked to core.js) */
+    #jewelry-options {
+      flex: 1; display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 12px; overflow-y: auto; padding-bottom: 20px; scrollbar-width: none;
+    }
+    #jewelry-options::-webkit-scrollbar { display: none; }
 
-/* SELECT BUTTON */
+    .thumb-btn {
+      width: 100%; aspect-ratio: 1; background: #1a1a1a;
+      border-radius: 12px; border: 2px solid #333; object-fit: contain;
+      cursor: pointer; transition: 0.3s; padding: 8px;
+    }
+    .thumb-btn:hover { border-color: #d4af37; transform: translateY(-3px); }
 
-#openBtn{
-position:fixed;
-bottom:120px;
-left:50%;
-transform:translateX(-50%);
-padding:12px 20px;
-background:gold;
-border:none;
-border-radius:8px;
-font-size:16px;
-cursor:pointer;
-}
-
-
-/* POPUP */
-
-#popup{
-position:fixed;
-bottom:0;
-left:0;
-width:100%;
-height:50%;
-background:rgba(0,0,0,0.95);
-display:none;
-flex-direction:column;
-padding:10px;
-box-sizing:border-box;
-}
-
-
-/* CATEGORY */
-
-.catRow{
-display:flex;
-justify-content:space-around;
-margin-bottom:10px;
-}
-
-.cat{
-background:#222;
-color:white;
-padding:8px 12px;
-border-radius:6px;
-cursor:pointer;
-}
-
-.cat.active{
-background:gold;
-color:black;
-}
-
-
-/* PRODUCTS */
-
-#products{
-flex:1;
-display:flex;
-flex-wrap:wrap;
-gap:10px;
-overflow-y:auto;
-}
-
-.product{
-width:70px;
-height:70px;
-background:#222;
-color:white;
-display:flex;
-align-items:center;
-justify-content:center;
-border-radius:8px;
-border:2px solid #444;
-cursor:pointer;
-}
-
-.product:hover{
-border:2px solid gold;
-}
-
-
-/* CLOSE */
-
-#close{
-position:absolute;
-top:5px;
-right:10px;
-color:white;
-cursor:pointer;
-font-size:20px;
-}
-
-</style>
+    #close-x { position: absolute; top: 15px; right: 20px; color: #888; cursor: pointer; font-size: 24px; }
+    #loading-status { position: fixed; top: 30%; left: 50%; transform: translate(-50%, -50%); color: #d4af37; z-index: 5; }
+  </style>
 </head>
 <body>
 
+  <div id="app">
+    <div id="flash-overlay"></div>
 
+    <div id="video-container">
+      <video id="webcam" autoplay playsinline muted></video>
+      <canvas id="overlay"></canvas>
+      <div id="loading-status">INITIALIZING AR...</div>
+    </div>
 
-<div id="camera">
-Camera / AR Screen
-</div>
+    <button id="openBtn" onclick="togglePopup(true)">SELECT JEWELLERY</button>
 
+    <div id="popup-panel">
+      <div id="close-x" onclick="togglePopup(false)">✖</div>
 
+      <div class="catRow">
+        <div class="cat-node active" onclick="handleCategory('earrings', this)">Earrings</div>
+        <div class="cat-node" onclick="handleCategory('chains', this)">Chains</div>
+        <div class="cat-node" onclick="handleCategory('rings', this)">Rings</div>
+        <div class="cat-node" onclick="handleCategory('bangles', this)">Bangles</div>
+      </div>
 
-<button id="openBtn" onclick="openPopup()">
-Select Jewellery
-</button>
+      <div id="jewelry-options"></div>
+    </div>
 
+    <div style="position:fixed; top:20px; right:20px; z-index:20; display:flex; gap:10px;">
+        <button class="pill accent" onclick="takeSnapshot()">📷 SNAP</button>
+        <button class="pill" onclick="toggleCoShop()">👥 CO-SHOP</button>
+    </div>
 
+    <div id="ai-concierge-container">
+        <div id="ai-bubble">Tap for Nila</div>
+        <div id="ai-avatar" onclick="toggleConciergeMute()"><div class="avatar-face">🤖</div></div>
+    </div>
 
-<div id="popup">
+    <div id="preview-modal" style="display:none;"><span class="close-preview" onclick="closePreview()">&times;</span><div class="preview-container"><img id="preview-image" src=""></div></div>
+    <div id="toast-notification"></div>
+  </div>
 
-<div id="close" onclick="closePopup()">✖</div>
+  <script src="core.js"></script>
 
-<div class="catRow">
+  <script>
+    /**
+     * Controls the Visibility of the Popup
+     */
+    function togglePopup(show) {
+        document.getElementById("popup-panel").style.display = show ? "flex" : "none";
+        document.getElementById("openBtn").style.display = show ? "none" : "block";
+    }
 
-<div class="cat" onclick="loadCategory('earrings',this)">Earrings</div>
-<div class="cat" onclick="loadCategory('chains',this)">Chains</div>
-<div class="cat" onclick="loadCategory('rings',this)">Rings</div>
-<div class="cat" onclick="loadCategory('bangles',this)">Bangles</div>
+    /**
+     * Handles Category switching and connects to engine logic
+     */
+    async function handleCategory(name, el) {
+        // UI Updates
+        document.querySelectorAll(".cat-node").forEach(c => c.classList.remove("active"));
+        el.classList.add("active");
 
-</div>
+        // Execute Engine logic (Camera switching and asset fetching)
+        if (typeof window.selectJewelryType === 'function') {
+            await window.selectJewelryType(name);
+        }
+    }
 
-
-<div id="products"></div>
-
-</div>
-
-
-
-<script>
-
-const counts = {
-earrings:15,
-chains:15,
-rings:15,
-bangles:15
-};
-
-
-function openPopup(){
-document.getElementById("popup").style.display="flex";
-}
-
-function closePopup(){
-document.getElementById("popup").style.display="none";
-}
-
-
-function loadCategory(name, el){
-
-document.querySelectorAll(".cat").forEach(c=>c.classList.remove("active"));
-el.classList.add("active");
-
-const box = document.getElementById("products");
-
-box.innerHTML="";
-
-for(let i=1;i<=counts[name];i++){
-
-let p=document.createElement("div");
-
-p.className="product";
-
-p.innerText=name+" "+i;
-
-p.onclick=()=>{
-
-document.getElementById("camera").innerText =
-"Trying "+name+" "+i;
-
-};
-
-box.appendChild(p);
-
-}
-
-}
-
-</script>
-
-
+    // Auto-init on load
+    window.addEventListener('load', () => {
+        setTimeout(() => {
+            handleCategory('earrings', document.querySelector('.cat-node'));
+        }, 1000);
+    });
+  </script>
 </body>
 </html>

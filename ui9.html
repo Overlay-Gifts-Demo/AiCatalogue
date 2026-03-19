@@ -1,239 +1,196 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>JEWELS-AI | Step AR UI</title>
+  
+  <link rel="stylesheet" href="style.css" />
 
-<title>Step UI Subfolder</title>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
-<style>
+  <style>
+    body { margin: 0; background: black; font-family: 'Montserrat', sans-serif; overflow: hidden; color: white; }
 
-body{
-margin:0;
-background:black;
-font-family:Arial;
-overflow:hidden;
-}
+    /* 1. AR BACKGROUND LAYER (Top 65%) */
+    #video-container {
+      position: fixed; top: 0; left: 0; width: 100%; height: 65%;
+      background: #000; z-index: 1; overflow: hidden;
+    }
+    #webcam, #overlay { position: absolute; width: 100%; height: 100%; object-fit: contain; }
+    #webcam { transform: scaleX(-1); }
 
-#camera{
-position:fixed;
-top:0;
-left:0;
-width:100%;
-height:65%;
-background:#000;
-display:flex;
-align-items:center;
-justify-content:center;
-color:white;
-font-size:22px;
-}
+    /* 2. PROGRESS STEPS BAR */
+    #steps-bar {
+      position: fixed; top: 65%; left: 0; width: 100%; height: 45px;
+      background: #111; display: flex; justify-content: center;
+      gap: 12px; align-items: center; z-index: 10; border-bottom: 1px solid #333;
+    }
+    .step-node {
+      padding: 6px 14px; background: #222; color: #888; border-radius: 20px;
+      font-size: 11px; text-transform: uppercase; font-weight: bold; cursor: pointer;
+    }
+    .step-node.active { background: #d4af37; color: black; box-shadow: 0 0 10px rgba(212, 175, 55, 0.4); }
 
-#steps{
-position:fixed;
-top:65%;
-left:0;
-width:100%;
-height:40px;
-background:#111;
-display:flex;
-justify-content:center;
-gap:10px;
-align-items:center;
-}
+    /* 3. INTERACTIVE PANEL (Bottom 35%) */
+    #jewelry-options {
+      position: fixed; bottom: 0; left: 0; width: 100%; height: calc(35% - 45px);
+      background: #080808; display: flex; flex-wrap: wrap; justify-content: center;
+      gap: 12px; padding: 15px; box-sizing: border-box; z-index: 10;
+      overflow-y: auto; scrollbar-width: none;
+    }
+    #jewelry-options::-webkit-scrollbar { display: none; }
 
-.step{
-padding:6px 10px;
-background:#222;
-color:white;
-border-radius:6px;
-}
+    /* Grid Items */
+    .thumb-btn, .folder-item {
+      width: 85px; height: 85px; background: #1a1a1a; color: white;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      border-radius: 12px; border: 2px solid #333; cursor: pointer;
+      transition: 0.3s; font-size: 11px; text-align: center; padding: 5px;
+    }
+    .thumb-btn:hover, .folder-item:hover { border-color: #d4af37; transform: translateY(-3px); }
 
-.step.active{
-background:gold;
-color:black;
-}
-
-#panel{
-position:fixed;
-bottom:0;
-left:0;
-width:100%;
-height:35%;
-background:#000;
-display:flex;
-flex-wrap:wrap;
-gap:10px;
-padding:10px;
-box-sizing:border-box;
-overflow:auto;
-}
-
-.item{
-width:80px;
-height:70px;
-background:#222;
-color:white;
-display:flex;
-align-items:center;
-justify-content:center;
-border-radius:8px;
-border:2px solid #444;
-cursor:pointer;
-}
-
-.item:hover{
-border:2px solid gold;
-}
-
-</style>
+    /* PREMIUM OVERLAYS */
+    #loading-status { position: fixed; top: 30%; left: 50%; transform: translate(-50%, -50%); color: #d4af37; z-index: 5; }
+    #top-util { position: fixed; top: 20px; right: 20px; z-index: 20; display: flex; gap: 10px; }
+  </style>
 </head>
 <body>
 
-
-<div id="camera">
-Camera / AR Screen
-</div>
-
-
-<div id="steps">
-
-<div class="step" id="s1">Category</div>
-<div class="step" id="s2">Sub</div>
-<div class="step" id="s3">Product</div>
-<div class="step" id="s4">Try</div>
-
-</div>
-
-
-<div id="panel"></div>
-
-
-<script>
-
-
-const data = {
-
-earrings:["Stud","Drop","Hoop"],
-rings:["Gold","Diamond","Silver"],
-chains:["Short","Long","Bridal"],
-bangles:["Simple","Bridal","Stone"]
-
-};
-
-const productCount = 15;
-
-let currentCategory="";
-let currentSub="";
-
-
-function setStep(n){
-
-document.querySelectorAll(".step").forEach(s=>s.classList.remove("active"));
-
-document.getElementById("s"+n).classList.add("active");
-
-}
-
-
-function showCategories(){
-
-setStep(1);
-
-const p=document.getElementById("panel");
-
-p.innerHTML="";
-
-Object.keys(data).forEach(cat=>{
-
-let d=document.createElement("div");
-
-d.className="item";
-
-d.innerText=cat;
-
-d.onclick=()=>{
-
-currentCategory=cat;
-
-showSub();
-
-};
-
-p.appendChild(d);
-
-});
-
-}
-
-
-function showSub(){
-
-setStep(2);
-
-const p=document.getElementById("panel");
-
-p.innerHTML="";
-
-data[currentCategory].forEach(sub=>{
-
-let d=document.createElement("div");
-
-d.className="item";
-
-d.innerText=sub;
-
-d.onclick=()=>{
-
-currentSub=sub;
-
-showProducts();
-
-};
-
-p.appendChild(d);
-
-});
-
-}
-
-
-function showProducts(){
-
-setStep(3);
-
-const p=document.getElementById("panel");
-
-p.innerHTML="";
-
-for(let i=1;i<=productCount;i++){
-
-let d=document.createElement("div");
-
-d.className="item";
-
-d.innerText=currentSub+" "+i;
-
-d.onclick=()=>{
-
-document.getElementById("camera").innerText=
-"Trying "+currentCategory+" "+currentSub+" "+i;
-
-setStep(4);
-
-};
-
-p.appendChild(d);
-
-}
-
-}
-
-
-showCategories();
-
-</script>
-
-
+  <div id="app">
+    <div id="flash-overlay"></div>
+
+    <div id="video-container">
+      <video id="webcam" autoplay playsinline muted></video>
+      <canvas id="overlay"></canvas>
+      <div id="loading-status">INITIALIZING...</div>
+    </div>
+
+    <div id="steps-bar">
+      <div class="step-node active" id="s1" onclick="showCategories()">Category</div>
+      <div class="step-node" id="s2">Sub</div>
+      <div class="step-node" id="s3">Product</div>
+      <div class="step-node" id="s4">Try</div>
+    </div>
+
+    <div id="jewelry-options"></div>
+
+    <div id="top-util">
+        <button class="pill accent" onclick="takeSnapshot()">📷 SNAP</button>
+        <button class="pill" onclick="toggleCoShop()">👥 CO-SHOP</button>
+    </div>
+
+    <div id="ai-concierge-container">
+        <div id="ai-bubble">Hi, I'm Nila</div>
+        <div id="ai-avatar" onclick="toggleConciergeMute()"><div class="avatar-face">🤖</div></div>
+    </div>
+
+    <div id="preview-modal" style="display:none;"><span class="close-preview" onclick="closePreview()">&times;</span><div class="preview-container"><img id="preview-image" src=""></div></div>
+    <div id="toast-notification"></div>
+  </div>
+
+  <script src="core.js"></script>
+
+  <script>
+    // Configuration from your request
+    const subData = {
+      earrings: ["Studs", "Drops", "Hoops"],
+      chains: ["Gold", "Bridal", "Temple"],
+      rings: ["Solitaire", "Wedding", "Silver"],
+      bangles: ["Solid", "Cuffs", "Stone"]
+    };
+
+    let currentCat = "";
+    let currentSub = "";
+
+    function setStep(n) {
+      document.querySelectorAll(".step-node").forEach(s => s.classList.remove("active"));
+      document.getElementById("s" + n).classList.add("active");
+    }
+
+    /**
+     * Step 1: Main Categories
+     */
+    function showCategories() {
+      setStep(1);
+      const grid = document.getElementById("jewelry-options");
+      grid.innerHTML = "";
+
+      Object.keys(subData).forEach(cat => {
+        let div = document.createElement("div");
+        div.className = "folder-item";
+        div.innerHTML = `<span style="font-size:24px;">📁</span><span>${cat}</span>`;
+        div.onclick = async () => {
+          currentCat = cat;
+          // Switch camera modes early via engine
+          if (typeof window.selectJewelryType === 'function') {
+            await window.selectJewelryType(cat); 
+          }
+          showSub();
+        };
+        grid.appendChild(div);
+      });
+    }
+
+    /**
+     * Step 2: Sub-folders
+     */
+    function showSub() {
+      setStep(2);
+      const grid = document.getElementById("jewelry-options");
+      grid.innerHTML = "";
+
+      subData[currentCat].forEach(sub => {
+        let div = document.createElement("div");
+        div.className = "folder-item";
+        div.innerHTML = `<span style="font-size:24px;">📂</span><span>${sub}</span>`;
+        div.onclick = () => {
+          currentSub = sub;
+          showProducts();
+        };
+        grid.appendChild(div);
+      });
+    }
+
+    /**
+     * Step 3: Real Assets from Google Drive
+     */
+    async function showProducts() {
+      setStep(3);
+      const grid = document.getElementById("jewelry-options");
+      grid.innerHTML = "<div style='color:#d4af37'>Fetching assets...</div>";
+
+      // Fetch assets using engine logic
+      const assets = await fetchCategoryData(currentCat);
+      grid.innerHTML = "";
+
+      if (assets && assets.length > 0) {
+        assets.forEach((asset, index) => {
+          let img = document.createElement("img");
+          img.className = "thumb-btn";
+          img.src = asset.thumbSrc;
+          img.onclick = () => {
+            // Apply high-res asset via engine
+            applyAssetInstantly(asset, index, true);
+            setStep(4);
+            if (window.showToast) showToast(`Trying ${asset.name}`);
+          };
+          grid.appendChild(img);
+        });
+      } else {
+        grid.innerHTML = "<div style='color:red'>No assets found.</div>";
+      }
+    }
+
+    // Launch Step 1 on start
+    window.addEventListener('load', () => {
+      setTimeout(showCategories, 1500);
+    });
+  </script>
 </body>
 </html>

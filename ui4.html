@@ -1,169 +1,129 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>JEWELS-AI | Floating AR UI</title>
+  
+  <link rel="stylesheet" href="style.css" />
 
-<title>Floating UI</title>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
-<style>
+  <style>
+    body { margin: 0; background: black; font-family: 'Montserrat', sans-serif; overflow: hidden; }
 
-body{
-margin:0;
-background:black;
-font-family:Arial;
-overflow:hidden;
-}
+    /* 1. AR BACKGROUND LAYER */
+    #video-container { position: fixed; inset: 0; background: black; z-index: 0; }
+    #webcam, #overlay { position: absolute; width: 100%; height: 100%; object-fit: contain; }
+    #webcam { transform: scaleX(-1); }
 
-/* CAMERA */
+    /* 2. FLOATING CATEGORY ICONS */
+    .icon {
+      position: fixed; width: 70px; height: 70px; border-radius: 50%;
+      background: rgba(0, 0, 0, 0.5); color: #d4af37;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; border: 2px solid rgba(255,255,255,0.2);
+      backdrop-filter: blur(8px); z-index: 10; transition: all 0.3s ease;
+      font-weight: bold; font-size: 12px; text-transform: uppercase;
+    }
+    .icon.active { border: 2px solid #d4af37; background: rgba(212, 175, 55, 0.2); box-shadow: 0 0 15px rgba(212, 175, 55, 0.4); }
+    
+    /* Positions matching your UI request */
+    #earrings-btn { top: 15%; left: 8%; }
+    #chains-btn { top: 15%; right: 8%; }
+    #rings-btn { bottom: 25%; left: 15%; }
+    #bangles-btn { bottom: 25%; right: 15%; }
 
-#camera{
-position:fixed;
-top:0;
-left:0;
-width:100%;
-height:100%;
-background:#000;
-display:flex;
-align-items:center;
-justify-content:center;
-color:white;
-font-size:22px;
-}
+    /* 3. PRODUCT SLIDER (BOTTOM) */
+    #jewelry-options {
+      position: fixed; bottom: 0; left: 0; width: 100%; height: 100px;
+      background: linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0.5));
+      display: flex; overflow-x: auto; gap: 10px; padding: 15px;
+      box-sizing: border-box; z-index: 10; scrollbar-width: none;
+    }
+    #jewelry-options::-webkit-scrollbar { display: none; }
 
+    .thumb-btn {
+      min-width: 70px; height: 70px; background: rgba(34,34,34,0.8);
+      border-radius: 10px; border: 2px solid #444; object-fit: contain;
+      cursor: pointer; transition: 0.2s; padding: 5px;
+    }
+    .thumb-btn:hover { border-color: #d4af37; transform: scale(1.05); }
 
-/* FLOATING ICONS */
-
-.icon{
-position:fixed;
-width:70px;
-height:70px;
-border-radius:50%;
-background:rgba(255,255,255,0.15);
-color:white;
-display:flex;
-align-items:center;
-justify-content:center;
-cursor:pointer;
-border:2px solid #999;
-backdrop-filter:blur(5px);
-}
-
-.icon.active{
-border:2px solid gold;
-background:rgba(255,215,0,0.3);
-}
-
-
-/* POSITIONS */
-
-#earrings{ top:20%; left:10%; }
-#chains{ top:20%; right:10%; }
-#rings{ bottom:30%; left:20%; }
-#bangles{ bottom:30%; right:20%; }
-
-
-/* PRODUCT BAR */
-
-#products{
-position:fixed;
-bottom:0;
-left:0;
-width:100%;
-height:90px;
-background:rgba(0,0,0,0.85);
-display:flex;
-overflow-x:auto;
-gap:10px;
-padding:10px;
-box-sizing:border-box;
-}
-
-.product{
-min-width:70px;
-height:70px;
-background:#222;
-color:white;
-display:flex;
-align-items:center;
-justify-content:center;
-border-radius:10px;
-border:2px solid #444;
-}
-
-.product:hover{
-border:2px solid gold;
-}
-
-</style>
+    /* LOADING STATUS */
+    #loading-status { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #d4af37; z-index: 5; }
+  </style>
 </head>
 <body>
 
+  <div id="app">
+    <div id="flash-overlay"></div>
+    <div id="loading-status">Initializing AR...</div>
 
-<div id="camera">
-Camera / AR Screen
-</div>
+    <div id="video-container">
+      <video id="webcam" autoplay playsinline muted></video>
+      <canvas id="overlay"></canvas>
+    </div>
 
+    <div id="earrings-btn" class="icon active" onclick="selectJewelryType('earrings', this)">Ear</div>
+    <div id="chains-btn" class="icon" onclick="selectJewelryType('chains', this)">Chain</div>
+    <div id="rings-btn" class="icon" onclick="selectJewelryType('rings', this)">Ring</div>
+    <div id="bangles-btn" class="icon" onclick="selectJewelryType('bangles', this)">Bang</div>
 
-<div id="earrings" class="icon" onclick="loadCategory('earrings',this)">
-Ear
-</div>
+    <div id="jewelry-options" class="carousel-cards"></div>
 
-<div id="chains" class="icon" onclick="loadCategory('chains',this)">
-Chain
-</div>
+    <div style="position:fixed; top:20px; right:20px; z-index:20; display:flex; gap:10px;">
+        <button class="action-btn" onclick="takeSnapshot()">📷</button>
+        <button class="action-btn" onclick="toggleStacking()" id="stacking-btn">∞</button>
+    </div>
 
-<div id="rings" class="icon" onclick="loadCategory('rings',this)">
-Ring
-</div>
+    <div id="ai-concierge-container">
+        <div id="ai-bubble">Tap to activate Nila</div>
+        <div id="ai-avatar" onclick="toggleConciergeMute()">
+            <div class="avatar-ring"></div>
+            <div class="avatar-face">🤖</div> 
+        </div>
+    </div>
 
-<div id="bangles" class="icon" onclick="loadCategory('bangles',this)">
-Bang
-</div>
+    <div id="preview-modal" style="display:none;"><span class="close-preview" onclick="closePreview()">&times;</span><div class="preview-container"><img id="preview-image" src=""></div></div>
+    <div id="toast-notification"></div>
+  </div>
 
+  <script src="core.js"></script>
 
-<div id="products"></div>
+  <script>
+    /**
+     * Overrides the selection to handle the floating icon "active" states
+     */
+    const originalSelectType = window.selectJewelryType;
+    window.selectJewelryType = async function(type, element) {
+        // Handle UI Active Class
+        document.querySelectorAll(".icon").forEach(i => i.classList.remove("active"));
+        if (element) {
+            element.classList.add("active");
+        } else {
+            // If called via voice or init, find the correct button
+            const btn = document.getElementById(`${type}-btn`);
+            if (btn) btn.classList.add("active");
+        }
+        
+        // Execute original engine logic (Camera switching, asset loading)
+        if (typeof originalSelectType === 'function') {
+            await originalSelectType(type);
+        }
+    };
 
-
-
-<script>
-
-const counts = {
-earrings:15,
-chains:15,
-rings:15,
-bangles:15
-};
-
-function loadCategory(name, el){
-
-document.querySelectorAll(".icon").forEach(i=>i.classList.remove("active"));
-el.classList.add("active");
-
-const box = document.getElementById("products");
-box.innerHTML="";
-
-for(let i=1;i<=counts[name];i++){
-
-let p = document.createElement("div");
-p.className="product";
-p.innerText=name+" "+i;
-
-p.onclick=()=>{
-
-document.getElementById("camera").innerText =
-"Trying "+name+" "+i;
-
-};
-
-box.appendChild(p);
-
-}
-
-}
-
-</script>
-
-
+    // Auto-start with Earrings
+    window.addEventListener('load', () => {
+        setTimeout(() => {
+            window.selectJewelryType('earrings', document.getElementById('earrings-btn'));
+        }, 1000);
+    });
+  </script>
 </body>
 </html>
