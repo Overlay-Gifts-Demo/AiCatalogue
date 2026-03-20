@@ -193,11 +193,14 @@
         }, 800);
     }
 
-    function shareToWA() {
-        const text = encodeURIComponent("Check out my Jewels-AI look! ✨");
-        window.open(`https://wa.me/?text=${text}`, '_blank');
-    }
-
+   function shareToWA() {
+    // Your specific WhatsApp number
+    const phoneNumber = "917019743880";
+    const text = encodeURIComponent("Check out my Jewels-AI look! ✨");
+    
+    // This now opens a direct chat with YOU
+    window.open(`https://wa.me/${phoneNumber}?text=${text}`, '_blank');
+}
     function closePreview() {
         document.getElementById('preview-modal').style.display = 'none';
     }
