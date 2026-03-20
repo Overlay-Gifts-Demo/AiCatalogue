@@ -14,7 +14,6 @@
 
   <style>
     :root {
-      /* Changed Cyan to Luxury Gold */
       --luxury-gold: #D4AF37;
       --deep-bg: #0a0a0c;
       --accent-gradient: linear-gradient(135deg, #FFD700 0%, #B8860B 100%);
@@ -27,14 +26,10 @@
       overflow: hidden; height: 100vh;
     }
 
-    /* Fullscreen AR Layer */
-    #video-container {
-      position: fixed; inset: 0; z-index: 0;
-      background: #000;
-    }
+    #video-container { position: fixed; inset: 0; z-index: 0; background: #000; }
     video, canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    #webcam { transform: scaleX(-1); }
 
-    /* Unique Vertical Category Rail */
     #dock {
       position: fixed; left: 20px; top: 50%;
       transform: translateY(-50%);
@@ -62,7 +57,6 @@
       box-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
     }
 
-    /* Horizontal Jewelry Selection with Offset Cards */
     #jewelry-options {
       position: fixed; bottom: 40px; left: 90px; right: 20px;
       height: 120px; display: flex; align-items: flex-end;
@@ -78,12 +72,7 @@
       padding: 10px; object-fit: contain;
       cursor: pointer; transition: 0.3s;
     }
-    .thumb-btn:hover {
-      transform: translateY(-15px) rotate(3deg);
-      border-color: var(--luxury-gold);
-    }
 
-    /* Futuristic Capture Button */
     .capture-ring {
       position: fixed; bottom: 40px; right: 40px;
       width: 70px; height: 70px; border-radius: 50%;
@@ -92,63 +81,44 @@
       cursor: pointer; z-index: 25;
       box-shadow: 0 0 30px rgba(212, 175, 55, 0.4);
     }
-    .capture-ring::after {
-      content: ''; width: 55px; height: 55px; border-radius: 50%;
-      border: 2px solid #000;
-    }
-
-    /* AI Avatar (The "Core") */
-    #ai-concierge-container {
-      position: fixed; top: 30px; right: 30px; z-index: 30;
-    }
-    #ai-avatar {
-      width: 60px; height: 60px; border-radius: 50%;
-      background: #000; border: 2px solid var(--luxury-gold);
-      display: flex; align-items: center; justify-content: center;
-      animation: pulse 2s infinite; cursor: pointer;
-    }
-    
-    /* Gold Pulse Animation */
-    @keyframes pulse {
-      0% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.7); }
-      70% { box-shadow: 0 0 0 15px rgba(212, 175, 55, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0); }
-    }
+    .capture-ring::after { content: ''; width: 55px; height: 55px; border-radius: 50%; border: 2px solid #000; }
 
     #loading-status {
-      position: absolute; top: 30px; left: 100px;
+      position: absolute; top: 30px; left: 30px;
       font-size: 12px; letter-spacing: 3px; color: var(--luxury-gold);
-      text-transform: uppercase;
+      text-transform: uppercase; z-index: 10;
     }
 
-    #toast-notification {
-      position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-      background: var(--luxury-gold); color: black; padding: 10px 20px;
-      border-radius: 5px; opacity: 0; z-index: 100; transition: 0.3s;
-    }
-
-    /* Modal Styling */
+    /* PREVIEW MODAL */
     #preview-modal {
       display: none; position: fixed; inset: 0;
-      background: rgba(0,0,0,0.9); z-index: 100;
+      background: rgba(0,0,0,0.95); z-index: 100;
       flex-direction: column; align-items: center; justify-content: center;
+      padding: 20px;
     }
-    #preview-image { max-width: 85%; max-height: 70%; border-radius: 15px; border: 2px solid var(--luxury-gold); }
-    .close-preview { position: absolute; top: 30px; right: 30px; font-size: 40px; cursor: pointer; color: var(--luxury-gold); }
+    #preview-image { max-width: 90%; max-height: 65%; border-radius: 15px; border: 2px solid var(--luxury-gold); }
+    
+    .preview-actions { margin-top: 25px; display: flex; gap: 15px; width: 100%; max-width: 400px; }
     .preview-actions button {
-      margin-top: 20px; padding: 12px 30px; background: var(--luxury-gold);
-      border: none; border-radius: 5px; font-weight: bold; cursor: pointer;
+      flex: 1; padding: 15px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.3s;
     }
+    .btn-dl { background: var(--luxury-gold); color: black; }
+    .btn-wa { background: #25D366; color: white; }
+    
+    .close-preview { position: absolute; top: 30px; right: 30px; font-size: 40px; cursor: pointer; color: var(--luxury-gold); }
+    #flash-overlay { position: fixed; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 999; }
   </style>
 </head>
 <body>
 
   <div id="app">
+    <div id="flash-overlay"></div>
+    <div id="loading-status">System.Ready</div>
+
     <div id="video-container">
       <video id="webcam" autoplay playsinline muted></video>
       <canvas id="overlay"></canvas>
       <video id="remote-video" autoplay playsinline></video>
-      <div id="loading-status">System.Initialize...</div>
     </div>
 
     <div id="dock">
@@ -158,28 +128,91 @@
       <div class="cat" onclick="selectJewelryType('bangles', this)">Bangles</div>
     </div>
 
-    <div id="jewelry-options">
-      </div>
+    <div id="jewelry-options"></div>
 
-    <div id="ai-concierge-container">
-        <div id="ai-avatar" onclick="toggleConciergeMute()">
-            <span style="font-size: 24px;">✨</span>
-        </div>
-    </div>
-
-    <div class="capture-ring" onclick="takeSnapshot()"></div>
+    <div class="capture-ring" onclick="processSnapshot()"></div>
 
     <div id="preview-modal">
-        <span class="close-preview">&times;</span>
+        <span class="close-preview" onclick="closePreview()">&times;</span>
         <img id="preview-image" src="">
         <div class="preview-actions">
-            <button onclick="downloadSingleSnapshot()">DOWNLOAD SNAPSHOT</button>
+            <button class="btn-dl" onclick="downloadBakedImage()">📥 DOWNLOAD</button>
+            <button class="btn-wa" onclick="shareToWhatsApp()">🟢 WHATSAPP</button>
         </div>
     </div>
-    
-    <div id="toast-notification"></div>
   </div>
 
   <script src="core.js"></script>
+  <script>
+    // 1. Process Snapshot: Merges Video + AR + Branding
+    function processSnapshot() {
+        const flash = document.getElementById('flash-overlay');
+        flash.style.opacity = '1';
+        setTimeout(() => flash.style.opacity = '0', 150);
+
+        const video = document.getElementById('webcam');
+        const overlay = document.getElementById('overlay');
+        
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = video.videoWidth || 1280;
+        canvas.height = video.videoHeight || 720;
+
+        // Draw User (Mirrored)
+        ctx.save();
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        ctx.restore();
+
+        // Draw AR Jewelry
+        ctx.drawImage(overlay, 0, 0, canvas.width, canvas.height);
+
+        // Bake Description Box
+        const fileName = window.currentJewelry ? window.currentJewelry.split('/').pop().split('.')[0] : "Product_Selection";
+        const boxH = 120;
+        ctx.fillStyle = "rgba(0,0,0,0.85)";
+        ctx.fillRect(0, canvas.height - boxH, canvas.width, boxH);
+        ctx.strokeStyle = "#D4AF37";
+        ctx.lineWidth = 4;
+        ctx.strokeRect(0, canvas.height - boxH, canvas.width, boxH);
+
+        ctx.fillStyle = "#D4AF37";
+        ctx.font = "bold 32px Arial";
+        ctx.fillText("Product Description", 40, canvas.height - 70);
+        ctx.fillStyle = "white";
+        ctx.font = "24px Arial";
+        ctx.fillText("Item: " + fileName, 40, canvas.height - 30);
+
+        document.getElementById('preview-image').src = canvas.toDataURL("image/png");
+        document.getElementById('preview-modal').style.display = 'flex';
+    }
+
+    function closePreview() { document.getElementById('preview-modal').style.display = 'none'; }
+
+    function downloadBakedImage() {
+        const link = document.createElement('a');
+        link.download = "Jewels_AI_Look.png";
+        link.href = document.getElementById('preview-image').src;
+        link.click();
+    }
+
+    async function shareToWhatsApp() {
+        const dataUrl = document.getElementById('preview-image').src;
+        const blob = await (await fetch(dataUrl)).blob();
+        const file = new File([blob], 'my_look.png', { type: 'image/png' });
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+                files: [file],
+                title: 'Jewels AI',
+                text: 'Check out my jewelry look! ✨'
+            });
+        } else {
+            // Fallback for Desktop
+            window.open(`https://wa.me/919743600311?text=${encodeURIComponent("Check out my Jewels AI look!")}`, '_blank');
+        }
+    }
+  </script>
 </body>
 </html>

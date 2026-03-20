@@ -23,16 +23,14 @@
       overflow: hidden; height: 100vh;
     }
 
-    /* Video Background */
-    #video-container {
-      position: fixed; inset: 0; z-index: 0;
-    }
+    #video-container { position: fixed; inset: 0; z-index: 0; }
     video, canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    #webcam { transform: scaleX(-1); }
 
-    /* SIDEBAR: Wider and more opaque for visibility */
+    /* SIDEBAR */
     #dock {
       position: fixed; left: 0; top: 0; bottom: 0;
-      width: 180px; /* Fixed width so text is always visible */
+      width: 180px; 
       background: linear-gradient(to right, rgba(0,0,0,0.8) 0%, transparent 100%);
       display: flex; flex-direction: column; justify-content: center;
       z-index: 100;
@@ -42,32 +40,35 @@
       display: flex; align-items: center;
       padding: 20px 25px; cursor: pointer;
       transition: all 0.3s ease;
-      text-decoration: none;
     }
 
-    /* Text styling: Force visibility */
     .cat span {
       margin-left: 15px; 
       font-size: 14px; 
       font-weight: 800;
       text-transform: uppercase; 
       letter-spacing: 2px;
-      color: rgba(255, 255, 255, 0.6); /* Dimmed when inactive */
+      color: rgba(255, 255, 255, 0.6);
     }
 
-    /* Active state: High contrast Gold background with Black text */
     .cat.active {
       background: var(--merc-gold);
       border-radius: 0 50px 50px 0;
       box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
     }
 
-    .cat.active span {
-      color: #000 !important; /* Black text on gold for maximum visibility */
-    }
+    .cat.active span { color: #000 !important; }
+    .cat.active .icon { filter: brightness(0); }
 
-    .cat.active .icon {
-        filter: brightness(0); /* Makes emoji/icon black to match text */
+    /* SNAPSHOT BUTTON */
+    .snap-btn-container {
+      padding: 20px 25px;
+    }
+    .snap-btn {
+      width: 60px; height: 60px; border-radius: 50%; background: white;
+      border: 3px solid var(--merc-gold); cursor: pointer; font-size: 24px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
     }
 
     /* JEWELRY TRAY */
@@ -84,29 +85,32 @@
       background: rgba(255,255,255,0.1);
       border-radius: 15px; border: 1px solid rgba(255,255,255,0.2);
       object-fit: contain; padding: 10px; cursor: pointer;
-      transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      transition: 0.3s;
     }
 
-    #jewelry-options img:hover {
-      transform: scale(1.2);
-      border-color: var(--merc-gold);
+    /* PREVIEW MODAL */
+    #preview-modal {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.98);
+      z-index: 1000; flex-direction: column; align-items: center; justify-content: center; padding: 20px;
     }
+    #preview-image { max-width: 90%; max-height: 65%; border-radius: 15px; border: 2px solid var(--merc-gold); }
+    
+    .preview-actions { margin-top: 25px; display: flex; gap: 15px; width: 100%; max-width: 400px; }
+    .preview-actions button {
+      flex: 1; padding: 15px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer;
+    }
+    .btn-dl { background: var(--merc-gold); color: black; }
+    .btn-wa { background: #25D366; color: white; }
+    .close-preview { position: absolute; top: 30px; right: 30px; font-size: 40px; cursor: pointer; }
 
-    /* AI Avatar */
-    #ai-concierge-container {
-      position: fixed; top: 30px; right: 30px; z-index: 100;
-    }
-    #ai-avatar {
-      width: 50px; height: 50px; border-radius: 50%;
-      border: 2px solid var(--merc-gold);
-      background: #000; display: flex; align-items: center; justify-content: center;
-    }
-
+    #flash-overlay { position: fixed; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 999; }
   </style>
 </head>
 <body>
 
   <div id="app">
+    <div id="flash-overlay"></div>
+
     <div id="video-container">
       <video id="webcam" autoplay playsinline muted></video>
       <canvas id="overlay"></canvas>
@@ -126,12 +130,20 @@
       <div class="cat" onclick="handleCategory('bangles', this)">
           <span class="icon">✨</span><span>Bangles</span>
       </div>
+      <div class="snap-btn-container">
+          <button class="snap-btn" onclick="captureSnapshot()">📸</button>
+      </div>
     </div>
 
     <div id="jewelry-options"></div>
 
-    <div id="ai-concierge-container">
-        <div id="ai-avatar" onclick="toggleConciergeMute()">✨</div>
+    <div id="preview-modal">
+        <span class="close-preview" onclick="closePreview()">&times;</span>
+        <img id="preview-image" src="">
+        <div class="preview-actions">
+            <button class="btn-dl" onclick="downloadBakedImage()">📥 DOWNLOAD</button>
+            <button class="btn-wa" onclick="shareToWhatsApp()">🟢 WHATSAPP</button>
+        </div>
     </div>
   </div>
 
@@ -141,11 +153,71 @@
     function handleCategory(type, element) {
         document.querySelectorAll('.cat').forEach(nav => nav.classList.remove('active'));
         element.classList.add('active');
+        if (typeof selectJewelryType === "function") selectJewelryType(type);
+    }
 
-        if (typeof selectJewelryType === "function") {
-            selectJewelryType(type);
-        } else if (typeof filterJewelry === "function") {
-            filterJewelry(type);
+    // Capture, Merge Layers and Bake Description
+    function captureSnapshot() {
+        const flash = document.getElementById('flash-overlay');
+        flash.style.opacity = '1';
+        setTimeout(() => flash.style.opacity = '0', 150);
+
+        const video = document.getElementById('webcam');
+        const arLayer = document.getElementById('overlay');
+        
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = video.videoWidth || 1280;
+        canvas.height = video.videoHeight || 720;
+
+        // 1. Draw User (Mirrored)
+        ctx.save();
+        ctx.translate(canvas.width, 0); ctx.scale(-1, 1);
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        ctx.restore();
+
+        // 2. Draw Jewelry
+        ctx.drawImage(arLayer, 0, 0, canvas.width, canvas.height);
+
+        // 3. Bake Description Bar
+        const fileName = window.currentJewelry ? window.currentJewelry.split('/').pop().split('.')[0] : "Product_Selection";
+        const boxH = 120;
+        ctx.fillStyle = "rgba(0,0,0,0.85)";
+        ctx.fillRect(0, canvas.height - boxH, canvas.width, boxH);
+        ctx.strokeStyle = "#FFD700"; ctx.lineWidth = 4;
+        ctx.strokeRect(0, canvas.height - boxH, canvas.width, boxH);
+
+        ctx.fillStyle = "#FFD700"; ctx.font = "bold 32px Arial";
+        ctx.fillText("Product Description", 40, canvas.height - 70);
+        ctx.fillStyle = "white"; ctx.font = "24px Arial";
+        ctx.fillText("Item Code: " + fileName, 40, canvas.height - 30);
+
+        document.getElementById('preview-image').src = canvas.toDataURL("image/png");
+        document.getElementById('preview-modal').style.display = 'flex';
+    }
+
+    function closePreview() { document.getElementById('preview-modal').style.display = 'none'; }
+
+    function downloadBakedImage() {
+        const link = document.createElement('a');
+        link.download = "My_Jewels_Look.png";
+        link.href = document.getElementById('preview-image').src;
+        link.click();
+    }
+
+    async function shareToWhatsApp() {
+        const dataUrl = document.getElementById('preview-image').src;
+        const blob = await (await fetch(dataUrl)).blob();
+        const file = new File([blob], 'my_look.png', { type: 'image/png' });
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+                files: [file],
+                title: 'Jewels AI',
+                text: 'Check out my jewelry look! ✨'
+            });
+        } else {
+            window.open(`https://wa.me/919743600311?text=${encodeURIComponent("Check out my Jewels AI look!")}`, '_blank');
         }
     }
 
