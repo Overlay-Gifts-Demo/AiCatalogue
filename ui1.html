@@ -2,11 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>JEWELS-AI | Virtual Try-On</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>JEWELS-AI | Fixed Bottom Description</title>
   
-  <link rel="stylesheet" href="style.css" />
-
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
@@ -15,12 +13,13 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
   <style>
-    /* Integrated UI Overrides */
-    #video-container {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: #111; z-index: 0;
-    }
+    :root { --gold: #d4af37; }
+    body { margin: 0; background: #111; font-family: sans-serif; overflow: hidden; }
 
+    #video-container { position: fixed; inset: 0; background: #111; z-index: 0; }
+    video, canvas { position: absolute; width: 100%; height: 100%; object-fit: cover; }
+
+    /* UI Elements */
     #jewelry-options {
       position: fixed; bottom: 80px; left: 0; width: 100%; height: 90px;
       display: flex; overflow-x: auto; gap: 10px; padding: 10px;
@@ -37,17 +36,40 @@
       color: white; font-size: 14px; padding: 10px 15px; border-radius: 10px;
       background: #222; cursor: pointer; transition: 0.3s;
     }
+    .cat.active { background: var(--gold); color: black; font-weight: bold; }
 
-    .cat.active { background: #d4af37; color: black; font-weight: bold; }
-
-    /* Thumbnails from Set 1 core.js */
-    .thumb-btn {
-      min-width: 70px; height: 70px; background: #222; border-radius: 10px;
-      object-fit: contain; border: 2px solid #444; cursor: pointer;
+    /* Floating Snapshot Button */
+    #capture-trigger {
+      position: fixed; bottom: 180px; left: 20px;
+      width: 60px; height: 60px; border-radius: 50%;
+      background: var(--gold); border: none; font-size: 24px;
+      cursor: pointer; z-index: 20; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
     }
+
+    /* Preview Modal */
+    #preview-modal {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.95); z-index: 1000;
+      flex-direction: column; align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    #preview-image { max-width: 95%; max-height: 70%; border: 1px solid var(--gold); border-radius: 4px; }
+    
+    .preview-actions { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 350px; }
+    
+    .action-row { display: flex; gap: 10px; }
+    .action-row button { flex: 1; padding: 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+    
+    #download-status { color: var(--gold); font-size: 14px; text-align: center; margin-bottom: 5px; }
+    .btn-dl { background: var(--gold); color: #000; }
+    .btn-wa { background: #25D366; color: #fff; }
+
+    .close-preview { position: absolute; top: 20px; right: 20px; color: white; font-size: 40px; cursor: pointer; }
+    #flash-overlay { position: fixed; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 999; }
   </style>
 </head>
 <body>
+
   <div id="app">
     <div id="flash-overlay"></div>
     
@@ -55,8 +77,9 @@
       <video id="webcam" autoplay playsinline muted></video>
       <canvas id="overlay"></canvas>
       <video id="remote-video" autoplay playsinline></video>
-      <div id="loading-status">Initializing AR...</div>
     </div>
+
+    <button id="capture-trigger" onclick="runCaptureProcess()">📸</button>
 
     <div id="jewelry-options"></div>
 
@@ -67,18 +90,117 @@
       <div class="cat" onclick="selectJewelryType('bangles', this)">Bangles</div>
     </div>
 
-    <div id="ai-concierge-container">
-        <div id="ai-bubble">Tap Nila</div>
-        <div id="ai-avatar" onclick="toggleConciergeMute()">
-            <div class="avatar-ring"></div>
-            <div class="avatar-face">🤖</div> 
+    <div id="preview-modal">
+      <span class="close-preview" onclick="closePreview()">&times;</span>
+      <img id="preview-image" src="">
+      
+      <div class="preview-actions">
+        <div id="download-status"></div>
+        <div class="action-row">
+            <button class="btn-dl" id="dl-btn" onclick="executeDownload()">Download</button>
+            <button class="btn-wa" onclick="shareToWA()">WhatsApp</button>
         </div>
+      </div>
     </div>
-
-    <div id="preview-modal"><span class="close-preview">&times;</span><img id="preview-image" src=""><div class="preview-actions"><button onclick="downloadSingleSnapshot()">Download</button></div></div>
-    <div id="toast-notification"></div>
   </div>
 
   <script src="core.js"></script>
+
+  <script>
+    function getActiveProductInfo() {
+        // Automatically gets the filename from your core logic
+        const activeName = window.currentJewelry ? window.currentJewelry.split('/').pop().split('.')[0] : "A001";
+        return {
+            code: activeName,
+            desc: "Antique-finish luxury jewelry with hand-polished detail."
+        };
+    }
+
+    function runCaptureProcess() {
+        const flash = document.getElementById('flash-overlay');
+        flash.style.opacity = '1';
+        setTimeout(() => flash.style.opacity = '0', 150);
+
+        const video = document.getElementById('webcam');
+        const overlay = document.getElementById('overlay');
+        const info = getActiveProductInfo();
+
+        const captureCanvas = document.createElement('canvas');
+        const ctx = captureCanvas.getContext('2d');
+        captureCanvas.width = video.videoWidth;
+        captureCanvas.height = video.videoHeight;
+
+        // Draw Video
+        ctx.save();
+        ctx.scale(-1, 1);
+        ctx.drawImage(video, -captureCanvas.width, 0, captureCanvas.width, captureCanvas.height);
+        ctx.restore();
+
+        // Draw AR Jewelry
+        ctx.drawImage(overlay, 0, 0, captureCanvas.width, captureCanvas.height);
+
+        // --- DESCRIPTION BOX LOGIC ---
+        const boxHeight = 130;
+        
+        // 1. Black Background (80% transparent = 0.8 alpha)
+        ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
+        // Positioning at the absolute bottom (y = height - boxHeight)
+        ctx.fillRect(0, captureCanvas.height - boxHeight, captureCanvas.width, boxHeight);
+
+        // 2. Gold Border Top & Bottom
+        ctx.strokeStyle = "#d4af37";
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(0, captureCanvas.height - boxHeight);
+        ctx.lineTo(captureCanvas.width, captureCanvas.height - boxHeight);
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.moveTo(0, captureCanvas.height - 2);
+        ctx.lineTo(captureCanvas.width, captureCanvas.height - 2);
+        ctx.stroke();
+
+        // 3. Text Content
+        const textPadding = 30;
+        ctx.fillStyle = "#d4af37";
+        ctx.font = "bold 28px Arial";
+        ctx.fillText("Product Description", textPadding, captureCanvas.height - boxHeight + 40);
+        
+        ctx.fillStyle = "white";
+        ctx.font = "22px Arial";
+        ctx.fillText("Code: " + info.code, textPadding, captureCanvas.height - boxHeight + 75);
+        ctx.fillText(info.desc, textPadding, captureCanvas.height - boxHeight + 105);
+
+        document.getElementById('preview-image').src = captureCanvas.toDataURL('image/png');
+        document.getElementById('preview-modal').style.display = 'flex';
+        document.getElementById('download-status').innerText = "";
+    }
+
+    function executeDownload() {
+        const status = document.getElementById('download-status');
+        const btn = document.getElementById('dl-btn');
+        status.innerText = "Downloading...";
+        btn.disabled = true;
+
+        setTimeout(() => {
+            const dataURL = document.getElementById('preview-image').src;
+            const link = document.createElement('a');
+            link.href = dataURL;
+            link.download = 'jewels-ai-snapshot.png';
+            link.click();
+            status.innerText = "Download Completed";
+            btn.disabled = false;
+        }, 800);
+    }
+
+    function shareToWA() {
+        const text = encodeURIComponent("Check out my Jewels-AI look! ✨");
+        window.open(`https://wa.me/?text=${text}`, '_blank');
+    }
+
+    function closePreview() {
+        document.getElementById('preview-modal').style.display = 'none';
+    }
+  </script>
 </body>
 </html>
