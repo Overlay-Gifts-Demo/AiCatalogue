@@ -2,194 +2,189 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>JEWELS-AI | Step AR UI</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>JEWELS-AI | Solar Flare UI</title>
   
-  <link rel="stylesheet" href="style.css" />
-
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
   <style>
-    body { margin: 0; background: black; font-family: 'Montserrat', sans-serif; overflow: hidden; color: white; }
+    :root {
+      --solar-gold: #FFCC33;
+      --deep-obsidian: #0D0D0D;
+    }
 
-    /* 1. AR BACKGROUND LAYER (Top 65%) */
+    body, html {
+      margin: 0; padding: 0;
+      background: #000; color: white;
+      font-family: 'Inter', sans-serif;
+      overflow: hidden; height: 100vh;
+    }
+
     #video-container {
-      position: fixed; top: 0; left: 0; width: 100%; height: 65%;
-      background: #000; z-index: 1; overflow: hidden;
+      position: fixed; inset: 0; z-index: 0;
     }
-    #webcam, #overlay { position: absolute; width: 100%; height: 100%; object-fit: contain; }
-    #webcam { transform: scaleX(-1); }
+    video, canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 
-    /* 2. PROGRESS STEPS BAR */
-    #steps-bar {
-      position: fixed; top: 65%; left: 0; width: 100%; height: 45px;
-      background: #111; display: flex; justify-content: center;
-      gap: 12px; align-items: center; z-index: 10; border-bottom: 1px solid #333;
+    /* THE SOLAR HUB (Bottom Left Navigation) */
+    #nav-container {
+      position: fixed; bottom: 30px; left: 30px;
+      z-index: 100;
     }
-    .step-node {
-      padding: 6px 14px; background: #222; color: #888; border-radius: 20px;
-      font-size: 11px; text-transform: uppercase; font-weight: bold; cursor: pointer;
-    }
-    .step-node.active { background: #d4af37; color: black; box-shadow: 0 0 10px rgba(212, 175, 55, 0.4); }
 
-    /* 3. INTERACTIVE PANEL (Bottom 35%) */
+    #dock {
+      display: flex; gap: 15px; align-items: flex-end;
+    }
+
+    .cat {
+      width: 60px; height: 60px;
+      background: var(--deep-obsidian);
+      border: 2px solid rgba(255, 204, 51, 0.3);
+      border-radius: 20px 20px 5px 20px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      overflow: hidden;
+    }
+
+    .cat span {
+      font-size: 8px; font-weight: 900;
+      text-transform: uppercase; margin-top: 5px;
+      opacity: 0; transition: 0.3s;
+    }
+
+    /* Active Flare Animation */
+    .cat.active {
+      height: 90px;
+      background: var(--solar-gold);
+      border-color: #fff;
+      transform: translateY(-10px);
+      box-shadow: 0 0 30px rgba(255, 204, 51, 0.6);
+    }
+
+    .cat.active span { opacity: 1; color: #000; }
+    .cat.active .icon { filter: brightness(0); transform: scale(1.2); }
+
+    /* THE ORBITAL TRAY (Bottom Carousel) */
     #jewelry-options {
-      position: fixed; bottom: 0; left: 0; width: 100%; height: calc(35% - 45px);
-      background: #080808; display: flex; flex-wrap: wrap; justify-content: center;
-      gap: 12px; padding: 15px; box-sizing: border-box; z-index: 10;
-      overflow-y: auto; scrollbar-width: none;
+      position: fixed; bottom: 40px; left: 120px; right: 20px;
+      height: 140px; display: flex; align-items: center;
+      overflow-x: auto; gap: 35px; padding-left: 50px;
+      z-index: 90; scrollbar-width: none;
     }
     #jewelry-options::-webkit-scrollbar { display: none; }
 
-    /* Grid Items */
-    .thumb-btn, .folder-item {
-      width: 85px; height: 85px; background: #1a1a1a; color: white;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      border-radius: 12px; border: 2px solid #333; cursor: pointer;
-      transition: 0.3s; font-size: 11px; text-align: center; padding: 5px;
+    #jewelry-options img, .thumb-btn {
+      min-width: 100px !important;
+      height: 100px !important;
+      object-fit: contain;
+      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 80%);
+      border-radius: 50%;
+      cursor: pointer;
+      /* Swing animation for floating effect */
+      animation: swing 4s ease-in-out infinite;
+      transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    .thumb-btn:hover, .folder-item:hover { border-color: #d4af37; transform: translateY(-3px); }
 
-    /* PREMIUM OVERLAYS */
-    #loading-status { position: fixed; top: 30%; left: 50%; transform: translate(-50%, -50%); color: #d4af37; z-index: 5; }
-    #top-util { position: fixed; top: 20px; right: 20px; z-index: 20; display: flex; gap: 10px; }
+    @keyframes swing {
+      0%, 100% { transform: rotate(-3deg); }
+      50% { transform: rotate(3deg); }
+    }
+
+    #jewelry-options img:hover {
+      transform: scale(1.5) !important;
+      background: radial-gradient(circle, rgba(255,204,51,0.4) 0%, transparent 70%);
+      z-index: 10;
+    }
+
+    /* AI SOLAR CORE */
+    #ai-concierge-container {
+      position: fixed; top: 30px; right: 30px; z-index: 110;
+    }
+    #ai-avatar {
+      width: 50px; height: 50px;
+      background: var(--solar-gold);
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; box-shadow: 0 0 20px var(--solar-gold);
+      animation: flarePulse 3s infinite;
+    }
+
+    @keyframes flarePulse {
+      0% { box-shadow: 0 0 10px var(--solar-gold); }
+      50% { box-shadow: 0 0 30px #FF6600; }
+      100% { box-shadow: 0 0 10px var(--solar-gold); }
+    }
+
+    /* Initial Entrance Animation */
+    .cat { animation: slideIn 0.8s backwards; }
+    .cat:nth-child(1) { animation-delay: 0.1s; }
+    .cat:nth-child(2) { animation-delay: 0.2s; }
+    .cat:nth-child(3) { animation-delay: 0.3s; }
+    .cat:nth-child(4) { animation-delay: 0.4s; }
+
+    @keyframes slideIn {
+      from { transform: translateX(-100px) scale(0.5); opacity: 0; }
+      to { transform: translateX(0) scale(1); opacity: 1; }
+    }
+
   </style>
 </head>
 <body>
 
   <div id="app">
-    <div id="flash-overlay"></div>
-
     <div id="video-container">
       <video id="webcam" autoplay playsinline muted></video>
       <canvas id="overlay"></canvas>
-      <div id="loading-status">INITIALIZING...</div>
+      <video id="remote-video" autoplay playsinline></video>
     </div>
 
-    <div id="steps-bar">
-      <div class="step-node active" id="s1" onclick="showCategories()">Category</div>
-      <div class="step-node" id="s2">Sub</div>
-      <div class="step-node" id="s3">Product</div>
-      <div class="step-node" id="s4">Try</div>
+    <div id="nav-container">
+        <div id="dock">
+          <div class="cat active" onclick="handleFlareClick('earrings', this)">
+              <div class="icon" style="font-size: 20px;">💎</div><span>Earrings</span>
+          </div>
+          <div class="cat" onclick="handleFlareClick('chains', this)">
+              <div class="icon" style="font-size: 20px;">⛓️</div><span>Chains</span>
+          </div>
+          <div class="cat" onclick="handleFlareClick('rings', this)">
+              <div class="icon" style="font-size: 20px;">💍</div><span>Rings</span>
+          </div>
+          <div class="cat" onclick="handleFlareClick('bangles', this)">
+              <div class="icon" style="font-size: 20px;">✨</div><span>Bangles</span>
+          </div>
+        </div>
     </div>
 
     <div id="jewelry-options"></div>
 
-    <div id="top-util">
-        <button class="pill accent" onclick="takeSnapshot()">📷 SNAP</button>
-        <button class="pill" onclick="toggleCoShop()">👥 CO-SHOP</button>
-    </div>
-
     <div id="ai-concierge-container">
-        <div id="ai-bubble">Hi, I'm Nila</div>
-        <div id="ai-avatar" onclick="toggleConciergeMute()"><div class="avatar-face">🤖</div></div>
+        <div id="ai-avatar" onclick="toggleConciergeMute()">☀️</div>
     </div>
-
-    <div id="preview-modal" style="display:none;"><span class="close-preview" onclick="closePreview()">&times;</span><div class="preview-container"><img id="preview-image" src=""></div></div>
-    <div id="toast-notification"></div>
   </div>
 
   <script src="core.js"></script>
 
   <script>
-    // Configuration from your request
-    const subData = {
-      earrings: ["Studs", "Drops", "Hoops"],
-      chains: ["Gold", "Bridal", "Temple"],
-      rings: ["Solitaire", "Wedding", "Silver"],
-      bangles: ["Solid", "Cuffs", "Stone"]
-    };
+    function handleFlareClick(type, element) {
+        // UI Animation
+        document.querySelectorAll('.cat').forEach(nav => nav.classList.remove('active'));
+        element.classList.add('active');
 
-    let currentCat = "";
-    let currentSub = "";
-
-    function setStep(n) {
-      document.querySelectorAll(".step-node").forEach(s => s.classList.remove("active"));
-      document.getElementById("s" + n).classList.add("active");
+        // Logic call
+        if (typeof selectJewelryType === "function") {
+            selectJewelryType(type);
+        } else if (typeof filterJewelry === "function") {
+            filterJewelry(type);
+        }
     }
 
-    /**
-     * Step 1: Main Categories
-     */
-    function showCategories() {
-      setStep(1);
-      const grid = document.getElementById("jewelry-options");
-      grid.innerHTML = "";
-
-      Object.keys(subData).forEach(cat => {
-        let div = document.createElement("div");
-        div.className = "folder-item";
-        div.innerHTML = `<span style="font-size:24px;">📁</span><span>${cat}</span>`;
-        div.onclick = async () => {
-          currentCat = cat;
-          // Switch camera modes early via engine
-          if (typeof window.selectJewelryType === 'function') {
-            await window.selectJewelryType(cat); 
-          }
-          showSub();
-        };
-        grid.appendChild(div);
-      });
-    }
-
-    /**
-     * Step 2: Sub-folders
-     */
-    function showSub() {
-      setStep(2);
-      const grid = document.getElementById("jewelry-options");
-      grid.innerHTML = "";
-
-      subData[currentCat].forEach(sub => {
-        let div = document.createElement("div");
-        div.className = "folder-item";
-        div.innerHTML = `<span style="font-size:24px;">📂</span><span>${sub}</span>`;
-        div.onclick = () => {
-          currentSub = sub;
-          showProducts();
-        };
-        grid.appendChild(div);
-      });
-    }
-
-    /**
-     * Step 3: Real Assets from Google Drive
-     */
-    async function showProducts() {
-      setStep(3);
-      const grid = document.getElementById("jewelry-options");
-      grid.innerHTML = "<div style='color:#d4af37'>Fetching assets...</div>";
-
-      // Fetch assets using engine logic
-      const assets = await fetchCategoryData(currentCat);
-      grid.innerHTML = "";
-
-      if (assets && assets.length > 0) {
-        assets.forEach((asset, index) => {
-          let img = document.createElement("img");
-          img.className = "thumb-btn";
-          img.src = asset.thumbSrc;
-          img.onclick = () => {
-            // Apply high-res asset via engine
-            applyAssetInstantly(asset, index, true);
-            setStep(4);
-            if (window.showToast) showToast(`Trying ${asset.name}`);
-          };
-          grid.appendChild(img);
-        });
-      } else {
-        grid.innerHTML = "<div style='color:red'>No assets found.</div>";
-      }
-    }
-
-    // Launch Step 1 on start
     window.addEventListener('load', () => {
-      setTimeout(showCategories, 1500);
+        setTimeout(() => {
+            const activeBtn = document.querySelector('.cat.active');
+            if (activeBtn) handleFlareClick('earrings', activeBtn);
+        }, 1200);
     });
   </script>
 </body>

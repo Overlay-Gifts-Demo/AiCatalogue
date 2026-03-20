@@ -2,156 +2,182 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>JEWELS-AI | Spotlight AR</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>JEWELS-AI | Constellation UI</title>
   
-  <link rel="stylesheet" href="style.css" />
-
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
   <style>
-    body { margin: 0; background: black; font-family: 'Montserrat', sans-serif; overflow: hidden; color: white; }
-
-    /* 1. TOP BAR */
-    #top-header {
-      position: fixed; top: 0; left: 0; width: 100%; height: 60px;
-      background: #111; display: flex; justify-content: center; align-items: center;
-      z-index: 100; border-bottom: 1px solid #333;
+    :root {
+      --star-gold: #FFD700;
+      --starlight: rgba(255, 255, 255, 0.8);
+      --void-bg: rgba(0, 0, 0, 0.4);
     }
 
-    #cat-select {
-      padding: 8px 15px; background: #222; color: #d4af37;
-      border: 1px solid #d4af37; border-radius: 5px; font-weight: bold;
+    body, html {
+      margin: 0; padding: 0;
+      background: #000; color: white;
+      font-family: 'Quicksand', sans-serif;
+      overflow: hidden; height: 100vh;
     }
 
-    /* 2. CAMERA VIEWPORT (Centered between Top & Carousel) */
     #video-container {
-      position: fixed; top: 60px; bottom: 180px; left: 0; right: 0;
-      background: #000; z-index: 1; overflow: hidden;
+      position: fixed; inset: 0; z-index: 0;
     }
-    #webcam, #overlay { position: absolute; width: 100%; height: 100%; object-fit: contain; }
-    #webcam { transform: scaleX(-1); }
+    video, canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 
-    /* 3. SPOTLIGHT CAROUSEL */
+    /* COSMIC NAVIGATION: Top Floating Clusters */
+    #dock {
+      position: fixed; top: 30px; left: 20px; right: 20px;
+      display: flex; justify-content: space-between;
+      z-index: 100;
+    }
+
+    .nav-group { display: flex; gap: 15px; }
+
+    .cat {
+      width: 55px; height: 55px;
+      background: var(--void-bg);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 215, 0, 0.2);
+      border-radius: 50%;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      cursor: pointer; transition: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .cat span {
+      font-size: 8px; text-transform: uppercase;
+      letter-spacing: 1px; margin-top: 4px; color: var(--starlight);
+      opacity: 0; transition: 0.3s;
+    }
+
+    /* Active Star: Becomes a bright point of light */
+    .cat.active {
+      background: #fff;
+      transform: scale(1.1);
+      box-shadow: 0 0 30px #fff, 0 0 60px var(--star-gold);
+      border-color: #fff;
+    }
+    .cat.active .icon { filter: brightness(0); }
+    .cat.active span { opacity: 1; color: #000; font-weight: bold; }
+
+    /* STELLAR TRAY: Bottom Horizontal Flow */
     #jewelry-options {
-      position: fixed; bottom: 0; left: 0; width: 100%; height: 180px;
-      background: linear-gradient(to top, rgba(0,0,0,1), rgba(0,0,0,0.8));
-      display: flex; align-items: center; justify-content: center;
-      gap: 25px; overflow-x: auto; padding: 0 50px; z-index: 10;
-      scrollbar-width: none;
+      position: fixed; bottom: 40px; left: 0; width: 100%;
+      height: 140px; display: flex; 
+      align-items: center; overflow-x: auto;
+      gap: 30px; padding: 0 60px;
+      z-index: 90; scrollbar-width: none;
     }
     #jewelry-options::-webkit-scrollbar { display: none; }
 
-    /* Carousel Item Styling */
-    .thumb-btn {
-      min-width: 90px; height: 90px; background: #1a1a1a;
-      border-radius: 12px; border: 2px solid #444; object-fit: contain;
-      cursor: pointer; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-      opacity: 0.4; transform: scale(0.8); padding: 8px;
+    /* The Jewelry "Stars" */
+    #jewelry-options img, .thumb-btn {
+      min-width: 90px !important;
+      height: 90px !important;
+      object-fit: contain;
+      background: radial-gradient(circle, rgba(255,215,0,0.1) 0%, transparent 70%);
+      border-radius: 20px;
+      cursor: pointer;
+      transition: 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+      filter: drop-shadow(0 0 5px rgba(255,215,0,0.3));
     }
 
-    /* The "Spotlight" Effect */
-    .thumb-btn.active-spotlight {
-      opacity: 1; transform: scale(1.25); border: 2px solid #d4af37;
-      box-shadow: 0 0 20px rgba(212, 175, 55, 0.4); background: #222;
+    #jewelry-options img:hover {
+      transform: scale(1.4) translateY(-20px);
+      filter: drop-shadow(0 0 15px var(--star-gold));
     }
 
-    /* PREMIUM TOOLS */
-    #loading-status { position: fixed; top: 40%; left: 50%; transform: translate(-50%, -50%); color: #d4af37; z-index: 5; }
-    .side-util { position: fixed; right: 20px; top: 80px; display: flex; flex-direction: column; gap: 10px; z-index: 20; }
+    /* AI NEBULA */
+    #ai-concierge-container {
+      position: fixed; top: 50%; right: 20px;
+      transform: translateY(-50%); z-index: 110;
+    }
+    #ai-avatar {
+      width: 40px; height: 40px;
+      background: transparent;
+      border: 1px solid var(--star-gold);
+      border-radius: 50%; display: flex;
+      align-items: center; justify-content: center;
+      cursor: pointer;
+      animation: twinkle 3s infinite ease-in-out;
+    }
+
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.3; transform: scale(0.8); box-shadow: 0 0 0px var(--star-gold); }
+      50% { opacity: 1; transform: scale(1.2); box-shadow: 0 0 20px var(--star-gold); }
+    }
+
+    /* Background Overlay for Depth */
+    .cosmic-overlay {
+        position: fixed; inset: 0;
+        background: radial-gradient(circle at bottom, rgba(255,215,0,0.05) 0%, transparent 50%);
+        pointer-events: none; z-index: 1;
+    }
   </style>
 </head>
 <body>
 
   <div id="app">
-    <div id="flash-overlay"></div>
-
-    <div id="top-header">
-      <select id="cat-select" onchange="handleSpotlightChange()">
-        <option value="earrings">Earrings</option>
-        <option value="chains">Chains</option>
-        <option value="rings">Rings</option>
-        <option value="bangles">Bangles</option>
-      </select>
-    </div>
-
+    <div class="cosmic-overlay"></div>
+    
     <div id="video-container">
       <video id="webcam" autoplay playsinline muted></video>
       <canvas id="overlay"></canvas>
-      <div id="loading-status">INITIALIZING...</div>
+      <video id="remote-video" autoplay playsinline></video>
     </div>
 
-    <div id="jewelry-options" class="carousel-cards"></div>
-
-    <div class="side-util">
-        <button class="action-btn" onclick="takeSnapshot()">📷</button>
-        <button class="action-btn" onclick="toggleCoShop()">👥</button>
+    <div id="dock">
+        <div class="nav-group">
+            <div class="cat active" onclick="handleStarClick('earrings', this)">
+                <div class="icon">✨</div><span>Earrings</span>
+            </div>
+            <div class="cat" onclick="handleStarClick('chains', this)">
+                <div class="icon">💎</div><span>Chains</span>
+            </div>
+        </div>
+        <div class="nav-group">
+            <div class="cat" onclick="handleStarClick('rings', this)">
+                <div class="icon">💍</div><span>Rings</span>
+            </div>
+            <div class="cat" onclick="handleStarClick('bangles', this)">
+                <div class="icon">☄️</div><span>Bangles</span>
+            </div>
+        </div>
     </div>
+
+    <div id="jewelry-options"></div>
 
     <div id="ai-concierge-container">
-        <div id="ai-bubble">Hi, I'm Nila</div>
-        <div id="ai-avatar" onclick="toggleConciergeMute()"><div class="avatar-face">🤖</div></div>
+        <div id="ai-avatar" onclick="toggleConciergeMute()">⭐</div>
     </div>
-
-    <div id="preview-modal" style="display:none;"><span class="close-preview" onclick="closePreview()">&times;</span><div class="preview-container"><img id="preview-image" src=""></div></div>
-    <div id="toast-notification"></div>
   </div>
 
   <script src="core.js"></script>
 
   <script>
-    /**
-     * Connects the Spotlight UI to the Engine logic
-     */
-    async function handleSpotlightChange() {
-        const cat = document.getElementById("cat-select").value;
-        
-        // Execute original engine logic (Camera switching and asset fetching)
-        if (typeof window.selectJewelryType === 'function') {
-            await window.selectJewelryType(cat);
-        }
-        
-        // Wait a moment for engine to populate items, then apply Spotlight logic
-        setTimeout(applySpotlightEffect, 500);
-    }
+    function handleStarClick(type, element) {
+        // UI Selection
+        document.querySelectorAll('.cat').forEach(nav => nav.classList.remove('active'));
+        element.classList.add('active');
 
-    /**
-     * Applies the visual "active" scaling to the selected carousel item
-     */
-    function applySpotlightEffect() {
-        const items = document.querySelectorAll(".thumb-btn");
-        items.forEach((btn, index) => {
-            btn.onclick = () => {
-                // Remove spotlight from others
-                items.forEach(i => i.classList.remove("active-spotlight"));
-                // Add to clicked
-                btn.classList.add("active-spotlight");
-                btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-                
-                // Call core engine to apply the actual AR asset
-                // We assume JEWELRY_ASSETS was populated by selectJewelryType
-                const cat = document.getElementById("cat-select").value;
-                const asset = window.JEWELRY_ASSETS[cat][index];
-                if (window.applyAssetInstantly) {
-                    window.applyAssetInstantly(asset, index, true);
-                }
-            };
-        });
-        
-        // Set first item as active by default
-        if (items.length > 0) {
-            items[0].classList.add("active-spotlight");
+        // Logic call
+        if (typeof selectJewelryType === "function") {
+            selectJewelryType(type);
+        } else if (typeof filterJewelry === "function") {
+            filterJewelry(type);
         }
     }
 
-    // Auto-init on page load
     window.addEventListener('load', () => {
-        setTimeout(handleSpotlightChange, 1200);
+        setTimeout(() => {
+            const activeBtn = document.querySelector('.cat.active');
+            if (activeBtn) handleStarClick('earrings', activeBtn);
+        }, 1200);
     });
   </script>
 </body>
