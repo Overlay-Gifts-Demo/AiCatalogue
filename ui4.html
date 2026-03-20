@@ -3,10 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>JEWELS-AI | Floating AR UI</title>
+  <title>JEWELS-AI | Gold-Chic Try-On</title>
   
-  <link rel="stylesheet" href="style.css" />
-
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
@@ -15,115 +13,173 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
   <style>
-    body { margin: 0; background: black; font-family: 'Montserrat', sans-serif; overflow: hidden; }
-
-    /* 1. AR BACKGROUND LAYER */
-    #video-container { position: fixed; inset: 0; background: black; z-index: 0; }
-    #webcam, #overlay { position: absolute; width: 100%; height: 100%; object-fit: contain; }
-    #webcam { transform: scaleX(-1); }
-
-    /* 2. FLOATING CATEGORY ICONS */
-    .icon {
-      position: fixed; width: 70px; height: 70px; border-radius: 50%;
-      background: rgba(0, 0, 0, 0.5); color: #d4af37;
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer; border: 2px solid rgba(255,255,255,0.2);
-      backdrop-filter: blur(8px); z-index: 10; transition: all 0.3s ease;
-      font-weight: bold; font-size: 12px; text-transform: uppercase;
+    :root {
+      /* Changed Cyan to Luxury Gold */
+      --luxury-gold: #D4AF37;
+      --deep-bg: #0a0a0c;
+      --accent-gradient: linear-gradient(135deg, #FFD700 0%, #B8860B 100%);
     }
-    .icon.active { border: 2px solid #d4af37; background: rgba(212, 175, 55, 0.2); box-shadow: 0 0 15px rgba(212, 175, 55, 0.4); }
-    
-    /* Positions matching your UI request */
-    #earrings-btn { top: 15%; left: 8%; }
-    #chains-btn { top: 15%; right: 8%; }
-    #rings-btn { bottom: 25%; left: 15%; }
-    #bangles-btn { bottom: 25%; right: 15%; }
 
-    /* 3. PRODUCT SLIDER (BOTTOM) */
+    body, html {
+      margin: 0; padding: 0;
+      background: var(--deep-bg);
+      color: #fff; font-family: 'Inter', system-ui, sans-serif;
+      overflow: hidden; height: 100vh;
+    }
+
+    /* Fullscreen AR Layer */
+    #video-container {
+      position: fixed; inset: 0; z-index: 0;
+      background: #000;
+    }
+    video, canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+
+    /* Unique Vertical Category Rail */
+    #dock {
+      position: fixed; left: 20px; top: 50%;
+      transform: translateY(-50%);
+      display: flex; flex-direction: column;
+      gap: 15px; z-index: 20;
+    }
+
+    .cat {
+      width: 50px; height: 50px;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.8);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px; cursor: pointer;
+      font-size: 10px; text-transform: uppercase;
+      writing-mode: vertical-rl; text-orientation: mixed;
+      transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      letter-spacing: 1px; color: #888;
+    }
+
+    .cat.active {
+      height: 100px;
+      background: var(--accent-gradient);
+      color: #000; font-weight: 800;
+      border-color: var(--luxury-gold);
+      box-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
+    }
+
+    /* Horizontal Jewelry Selection with Offset Cards */
     #jewelry-options {
-      position: fixed; bottom: 0; left: 0; width: 100%; height: 100px;
-      background: linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0.5));
-      display: flex; overflow-x: auto; gap: 10px; padding: 15px;
-      box-sizing: border-box; z-index: 10; scrollbar-width: none;
+      position: fixed; bottom: 40px; left: 90px; right: 20px;
+      height: 120px; display: flex; align-items: flex-end;
+      overflow-x: auto; gap: 20px; padding: 10px;
+      z-index: 15; scrollbar-width: none;
     }
     #jewelry-options::-webkit-scrollbar { display: none; }
 
     .thumb-btn {
-      min-width: 70px; height: 70px; background: rgba(34,34,34,0.8);
-      border-radius: 10px; border: 2px solid #444; object-fit: contain;
-      cursor: pointer; transition: 0.2s; padding: 5px;
+      min-width: 90px; height: 90px;
+      background: linear-gradient(145deg, #1a1a1e, #0a0a0c);
+      border: 1px solid #333; border-radius: 20px;
+      padding: 10px; object-fit: contain;
+      cursor: pointer; transition: 0.3s;
     }
-    .thumb-btn:hover { border-color: #d4af37; transform: scale(1.05); }
+    .thumb-btn:hover {
+      transform: translateY(-15px) rotate(3deg);
+      border-color: var(--luxury-gold);
+    }
 
-    /* LOADING STATUS */
-    #loading-status { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #d4af37; z-index: 5; }
+    /* Futuristic Capture Button */
+    .capture-ring {
+      position: fixed; bottom: 40px; right: 40px;
+      width: 70px; height: 70px; border-radius: 50%;
+      background: var(--accent-gradient);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; z-index: 25;
+      box-shadow: 0 0 30px rgba(212, 175, 55, 0.4);
+    }
+    .capture-ring::after {
+      content: ''; width: 55px; height: 55px; border-radius: 50%;
+      border: 2px solid #000;
+    }
+
+    /* AI Avatar (The "Core") */
+    #ai-concierge-container {
+      position: fixed; top: 30px; right: 30px; z-index: 30;
+    }
+    #ai-avatar {
+      width: 60px; height: 60px; border-radius: 50%;
+      background: #000; border: 2px solid var(--luxury-gold);
+      display: flex; align-items: center; justify-content: center;
+      animation: pulse 2s infinite; cursor: pointer;
+    }
+    
+    /* Gold Pulse Animation */
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.7); }
+      70% { box-shadow: 0 0 0 15px rgba(212, 175, 55, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0); }
+    }
+
+    #loading-status {
+      position: absolute; top: 30px; left: 100px;
+      font-size: 12px; letter-spacing: 3px; color: var(--luxury-gold);
+      text-transform: uppercase;
+    }
+
+    #toast-notification {
+      position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+      background: var(--luxury-gold); color: black; padding: 10px 20px;
+      border-radius: 5px; opacity: 0; z-index: 100; transition: 0.3s;
+    }
+
+    /* Modal Styling */
+    #preview-modal {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.9); z-index: 100;
+      flex-direction: column; align-items: center; justify-content: center;
+    }
+    #preview-image { max-width: 85%; max-height: 70%; border-radius: 15px; border: 2px solid var(--luxury-gold); }
+    .close-preview { position: absolute; top: 30px; right: 30px; font-size: 40px; cursor: pointer; color: var(--luxury-gold); }
+    .preview-actions button {
+      margin-top: 20px; padding: 12px 30px; background: var(--luxury-gold);
+      border: none; border-radius: 5px; font-weight: bold; cursor: pointer;
+    }
   </style>
 </head>
 <body>
 
   <div id="app">
-    <div id="flash-overlay"></div>
-    <div id="loading-status">Initializing AR...</div>
-
     <div id="video-container">
       <video id="webcam" autoplay playsinline muted></video>
       <canvas id="overlay"></canvas>
+      <video id="remote-video" autoplay playsinline></video>
+      <div id="loading-status">System.Initialize...</div>
     </div>
 
-    <div id="earrings-btn" class="icon active" onclick="selectJewelryType('earrings', this)">Ear</div>
-    <div id="chains-btn" class="icon" onclick="selectJewelryType('chains', this)">Chain</div>
-    <div id="rings-btn" class="icon" onclick="selectJewelryType('rings', this)">Ring</div>
-    <div id="bangles-btn" class="icon" onclick="selectJewelryType('bangles', this)">Bang</div>
-
-    <div id="jewelry-options" class="carousel-cards"></div>
-
-    <div style="position:fixed; top:20px; right:20px; z-index:20; display:flex; gap:10px;">
-        <button class="action-btn" onclick="takeSnapshot()">📷</button>
-        <button class="action-btn" onclick="toggleStacking()" id="stacking-btn">∞</button>
+    <div id="dock">
+      <div class="cat active" onclick="selectJewelryType('earrings', this)">Earrings</div>
+      <div class="cat" onclick="selectJewelryType('chains', this)">Chains</div>
+      <div class="cat" onclick="selectJewelryType('rings', this)">Rings</div>
+      <div class="cat" onclick="selectJewelryType('bangles', this)">Bangles</div>
     </div>
+
+    <div id="jewelry-options">
+      </div>
 
     <div id="ai-concierge-container">
-        <div id="ai-bubble">Tap to activate Nila</div>
         <div id="ai-avatar" onclick="toggleConciergeMute()">
-            <div class="avatar-ring"></div>
-            <div class="avatar-face">🤖</div> 
+            <span style="font-size: 24px;">✨</span>
         </div>
     </div>
 
-    <div id="preview-modal" style="display:none;"><span class="close-preview" onclick="closePreview()">&times;</span><div class="preview-container"><img id="preview-image" src=""></div></div>
+    <div class="capture-ring" onclick="takeSnapshot()"></div>
+
+    <div id="preview-modal">
+        <span class="close-preview">&times;</span>
+        <img id="preview-image" src="">
+        <div class="preview-actions">
+            <button onclick="downloadSingleSnapshot()">DOWNLOAD SNAPSHOT</button>
+        </div>
+    </div>
+    
     <div id="toast-notification"></div>
   </div>
 
   <script src="core.js"></script>
-
-  <script>
-    /**
-     * Overrides the selection to handle the floating icon "active" states
-     */
-    const originalSelectType = window.selectJewelryType;
-    window.selectJewelryType = async function(type, element) {
-        // Handle UI Active Class
-        document.querySelectorAll(".icon").forEach(i => i.classList.remove("active"));
-        if (element) {
-            element.classList.add("active");
-        } else {
-            // If called via voice or init, find the correct button
-            const btn = document.getElementById(`${type}-btn`);
-            if (btn) btn.classList.add("active");
-        }
-        
-        // Execute original engine logic (Camera switching, asset loading)
-        if (typeof originalSelectType === 'function') {
-            await originalSelectType(type);
-        }
-    };
-
-    // Auto-start with Earrings
-    window.addEventListener('load', () => {
-        setTimeout(() => {
-            window.selectJewelryType('earrings', document.getElementById('earrings-btn'));
-        }, 1000);
-    });
-  </script>
 </body>
 </html>
