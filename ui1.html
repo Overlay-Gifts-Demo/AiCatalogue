@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>JEWELS-AI | AR Capture & WhatsApp</title>
+  <title>JEWELS-AI | AR Capture & WhatsApp Image Share</title>
   
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
@@ -98,7 +98,7 @@
         <div id="download-status"></div>
         <div class="action-row">
             <button class="btn-dl" id="dl-btn" onclick="executeDownload()">Download</button>
-            <button class="btn-wa" onclick="shareToWA()">WhatsApp</button>
+            <button class="btn-wa" id="wa-btn" onclick="shareToWA()">WhatsApp Image</button>
         </div>
       </div>
     </div>
@@ -187,21 +187,41 @@
         }, 800);
     }
 
-    function shareToWA() {
-        const phoneNumber = "917019743880";
+    /* UPDATED: WHATSAPP IMAGE SHARING */
+    async function shareToWA() {
+        const status = document.getElementById('download-status');
+        const dataURL = document.getElementById('preview-image').src;
         const info = getActiveProductInfo();
-        const text = encodeURIComponent(`Hi! I'm interested in this product from Jewels AI.\nCode: ${info.code}\nCheck out my look! ✨`);
         
-        // Use api.whatsapp.com for better cross-platform compatibility
-        const url = `https://api.whatsapp.com/send?phone=${phoneNumber}&text=${text}`;
-        
-        // Attempt to open in a new window
-        const waWindow = window.open(url, '_blank');
-        
-        // Fallback for some mobile browsers that block window.open
-        if (!waWindow || waWindow.closed || typeof waWindow.closed == 'undefined') {
-            window.location.href = url;
+        // 1. Convert Base64 DataURL to a File object
+        const response = await fetch(dataURL);
+        const blob = await response.blob();
+        const file = new File([blob], 'jewels-look.png', { type: 'image/png' });
+
+        // 2. Check if the browser supports sharing files (Mobile Browsers usually do)
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            try {
+                await navigator.share({
+                    files: [file],
+                    title: 'Jewels AI Look',
+                    text: `Hi! I'm interested in this product from Jewels AI.\nCode: ${info.code}\nCheck out my look! ✨`,
+                });
+            } catch (error) {
+                console.error("Share failed", error);
+                fallbackTextShare(info);
+            }
+        } else {
+            // 3. Fallback for Desktop: Open WhatsApp Chat with text only
+            alert("Your browser doesn't support direct image sharing. Opening chat...");
+            fallbackTextShare(info);
         }
+    }
+
+    function fallbackTextShare(info) {
+        const phoneNumber = "917019743880";
+        const text = encodeURIComponent(`Hi! I'm interested in product Code: ${info.code}.\nI've saved my screenshot to my phone. ✨`);
+        const url = `https://api.whatsapp.com/send?phone=${phoneNumber}&text=${text}`;
+        window.open(url, '_blank');
     }
 
     function closePreview() {
