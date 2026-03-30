@@ -39,7 +39,6 @@ object-fit:cover;
 transform:scaleX(-1);
 }
 
-/* ---------------- SIDE NAV ---------------- */
 #side-nav{
 position:absolute;
 top:20px;
@@ -66,7 +65,6 @@ background:#d4af37;
 color:black;
 }
 
-/* ---------------- BOTTOM LIST ---------------- */
 #jewelry-options{
 position:fixed;
 bottom:0;
@@ -80,7 +78,6 @@ padding:20px;
 z-index:15;
 }
 
-/* ---------------- PREVIEW UI ---------------- */
 #preview-modal{
 display:none;
 position:fixed;
@@ -150,123 +147,132 @@ pointer-events:none;
 }
 
 .pill-btn {
-    background: #222;
-    border: 1px solid #444;
-    color: white;
-    border-radius: 50px;
-    padding: 10px;
-    margin-top: 10px;
-    width: 100%;
-    cursor: pointer;
-    display: flex;
-    justify-content: center;
+background:#222;
+border:1px solid #444;
+color:white;
+border-radius:50px;
+padding:10px;
+margin-top:10px;
+width:100%;
+cursor:pointer;
+display:flex;
+justify-content:center;
 }
 </style>
 </head>
 
 <body>
+
 <div id="app">
-    <div id="flash-overlay"></div>
 
-    <div id="video-container">
-        <video id="webcam" autoplay playsinline muted></video>
-        <canvas id="overlay"></canvas>
-        <video id="remote-video" autoplay playsinline></video>
+<div id="flash-overlay"></div>
 
-        <div id="side-nav">
-            <div class="cat active" onclick="selectJewelryType('earrings',this)">Earrings</div>
-            <div class="cat" onclick="selectJewelryType('chains',this)">Chains</div>
-            <div class="cat" onclick="selectJewelryType('rings',this)">Rings</div>
-            <div class="cat" onclick="selectJewelryType('bangles',this)">Bangles</div>
+<div id="video-container">
+<video id="webcam" autoplay playsinline muted></video>
+<canvas id="overlay"></canvas>
+<video id="remote-video" autoplay playsinline></video>
 
-            <button class="pill-btn" onclick="processCapture()">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                <circle cx="12" cy="13" r="4"></circle>
-              </svg>
-            </button>
-        </div>
-    </div>
+<div id="side-nav">
+<div class="cat active" onclick="selectJewelryType('earrings',this)">Earrings</div>
+<div class="cat" onclick="selectJewelryType('chains',this)">Chains</div>
+<div class="cat" onclick="selectJewelryType('rings',this)">Rings</div>
+<div class="cat" onclick="selectJewelryType('bangles',this)">Bangles</div>
 
-    <div id="jewelry-options"></div>
+<button class="pill-btn" onclick="processCapture()">
+📸
+</button>
 
-    <div id="preview-modal">
-        <div class="preview-container">
-            <span class="close-preview" onclick="closePreview()">&times;</span>
-            <img id="preview-image">
-        </div>
+</div>
+</div>
 
-        <div class="preview-buttons">
-            <button class="preview-btn dl-btn" onclick="downloadImage()">Download</button>
-            <button class="preview-btn wa-btn" onclick="shareToWhatsApp()">WhatsApp Image</button>
-        </div>
-    </div>
+<div id="jewelry-options"></div>
+
+<div id="preview-modal">
+<div class="preview-container">
+<span class="close-preview" onclick="closePreview()">&times;</span>
+<img id="preview-image">
+</div>
+
+<div class="preview-buttons">
+<button class="preview-btn dl-btn" onclick="downloadImage()">Download</button>
+<button class="preview-btn wa-btn" onclick="shareToWhatsApp()">WhatsApp Image</button>
+</div>
+
+</div>
 </div>
 
 <script src="core.js"></script>
 
 <script>
+
 function processCapture(){
-    const flash = document.getElementById("flash-overlay");
-    flash.style.opacity = 1;
-    setTimeout(() => flash.style.opacity = 0, 150);
 
-    const video = document.getElementById("webcam");
-    const canvas = document.getElementById("overlay");
-    const merge = document.createElement("canvas");
-    const ctx = merge.getContext("2d");
+const flash=document.getElementById("flash-overlay");
+flash.style.opacity=1;
+setTimeout(()=>flash.style.opacity=0,150);
 
-    merge.width = video.videoWidth || 1280;
-    merge.height = video.videoHeight || 720;
+const video=document.getElementById("webcam");
+const canvas=document.getElementById("overlay");
 
-    ctx.save();
-    ctx.scale(-1, 1);
-    ctx.drawImage(video, -merge.width, 0, merge.width, merge.height);
-    ctx.restore();
+const merge=document.createElement("canvas");
+const ctx=merge.getContext("2d");
 
-    ctx.drawImage(canvas, 0, 0, merge.width, merge.height);
+merge.width=video.videoWidth||1280;
+merge.height=video.videoHeight||720;
 
-    // UPDATED LOGIC: Pulling filename and making it UPPERCASE
-    let name = "PRODUCT SELECTION";
-    if (window.currentJewelry) {
-        name = window.currentJewelry.split('/').pop().split('.')[0].toUpperCase();
-    }
+ctx.save();
+ctx.scale(-1,1);
+ctx.drawImage(video,-merge.width,0,merge.width,merge.height);
+ctx.restore();
 
-    ctx.fillStyle = "rgba(0,0,0,0.8)";
-    ctx.fillRect(0, merge.height - 100, merge.width, 100);
+ctx.drawImage(canvas,0,0,merge.width,merge.height);
 
-    ctx.strokeStyle = "#d4af37";
-    ctx.lineWidth = 4;
-    ctx.strokeRect(0, merge.height - 100, merge.width, 100);
 
-    ctx.fillStyle = "#d4af37";
-    ctx.font = "bold 30px Arial";
-    ctx.fillText("Product Description", 30, merge.height - 60);
+/* ===== filename only ===== */
 
-    ctx.fillStyle = "white";
-    ctx.font = "24px Arial";
-    // Now displays the UPPERCASE file name
-    ctx.fillText("Code: " + name, 30, merge.height - 25);
+let name="";
 
-    const url = merge.toDataURL();
-    document.getElementById("preview-image").src = url;
-    document.getElementById("preview-modal").style.display = "flex";
+if(window.currentJewelry){
+name=window.currentJewelry.split('/').pop().split('.')[0].toUpperCase();
 }
 
+ctx.fillStyle="rgba(0,0,0,0.8)";
+ctx.fillRect(0,merge.height-90,merge.width,90);
+
+ctx.strokeStyle="#d4af37";
+ctx.lineWidth=4;
+ctx.strokeRect(0,merge.height-90,merge.width,90);
+
+ctx.fillStyle="white";
+ctx.font="bold 32px Arial";
+ctx.fillText(name,30,merge.height-35);
+
+
+/* ========================= */
+
+const url=merge.toDataURL();
+
+document.getElementById("preview-image").src=url;
+document.getElementById("preview-modal").style.display="flex";
+
+}
+
+
 function closePreview(){
-    document.getElementById("preview-modal").style.display = "none";
+document.getElementById("preview-modal").style.display="none";
 }
 
 function downloadImage(){
-    const a = document.createElement("a");
-    a.href = document.getElementById("preview-image").src;
-    a.download = "jewels_ai_look.png";
-    a.click();
+const a=document.createElement("a");
+a.href=document.getElementById("preview-image").src;
+a.download="jewels_ai.png";
+a.click();
 }
 
 function shareToWhatsApp(){
-    window.open("https://wa.me/9743600311", "_blank");
+window.open("https://wa.me/9743600311","_blank");
 }
+
 </script>
 
 </body>
